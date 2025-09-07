@@ -1,0 +1,75 @@
+# Monitoring Configuration for Travel Advisor Chatbot
+monitoring:
+  enabled: true
+  interval: 30
+  retention_days: 30
+  
+endpoints:
+  rag_model: "http://localhost:8001"
+  embedding_model: "http://localhost:8002"
+  llm_model: "http://localhost:8003"
+  few_shot_model: "http://localhost:8004"
+
+metrics:
+  response_time:
+    threshold: 5.0
+    unit: "seconds"
+    
+  throughput:
+    threshold: 100
+    unit: "requests_per_second"
+    
+  error_rate:
+    threshold: 0.1
+    unit: "percentage"
+    
+  cpu_usage:
+    threshold: 90
+    unit: "percentage"
+    
+  memory_usage:
+    threshold: 90
+    unit: "percentage"
+    
+  model_accuracy:
+    threshold: 0.8
+    unit: "score"
+
+alerts:
+  critical:
+    - "Model endpoint is down"
+    - "High error rate detected"
+    - "Model accuracy below threshold"
+    
+  warning:
+    - "High response time detected"
+    - "High CPU usage"
+    - "High memory usage"
+    
+  info:
+    - "Performance degradation"
+    - "Model drift detected"
+
+notification:
+  channels:
+    - "dashboard"
+    - "logs"
+    - "email"
+    
+  email:
+    enabled: false
+    recipients: []
+    
+  webhook:
+    enabled: false
+    url: ""
+
+dashboard:
+  refresh_interval: 10
+  max_data_points: 1000
+  charts:
+    - "response_time"
+    - "throughput"
+    - "error_rate"
+    - "resource_usage"
+    - "model_accuracy"

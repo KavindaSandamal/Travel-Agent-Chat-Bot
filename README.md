@@ -18,12 +18,13 @@ This project demonstrates the application of Advanced AI course concepts to solv
 - **MLOps Pipeline**: Model training, evaluation, deployment, and monitoring
 
 ### 🌟 Travel Features
-- **1,554+ Real Travel Destinations** from comprehensive datasets
-- **54 Sri Lanka Destinations** with detailed travel guides
+- **6,649+ Enhanced Travel Destinations** from comprehensive datasets
+- **2,435 Sri Lanka Destinations** with detailed travel guides and accommodation data
+- **149 Countries Covered** with global travel information
 - **Conversational Context** - remembers previous queries for better responses
-- **Category-based Filtering** - Natural, Cultural, Adventure, Modern destinations
-- **Budget Recommendations** - Budget, Mid-range, Luxury options
-- **Real-time Travel Data** from TripAdvisor reviews and travel Q&A pairs
+- **Advanced Filtering** - Region, Category, Budget, Season, Travel Style, Interests, Group Type, Duration
+- **Real Accommodation Data** - Hotels, resorts, and accommodations with GPS coordinates
+- **Real-time Travel Data** from TripAdvisor reviews, destination reviews, and travel Q&A pairs
 
 ## 🚀 Quick Start
 
@@ -58,10 +59,14 @@ streamlit run travel_chatbot_app.py
 
 ## 📊 Datasets
 
-The system uses real-world travel datasets:
+The system uses comprehensive real-world travel datasets:
 
-- **Comprehensive Travel Destinations** (1,554 destinations)
-- **Sri Lanka Travel Guide** (54 destinations)
+- **Enhanced Travel Destinations** (6,649 destinations from 149 countries)
+- **Enhanced Sri Lanka Travel Guide** (2,435 destinations with accommodation data)
+- **Destination Reviews** (35,434 reviews from 236 destinations)
+- **Detailed Reviews** (16,156 reviews with ratings and user information)
+- **Accommodation Information** (2,130 accommodations with GPS coordinates)
+- **Global Hotels Data** (2,689 hotels from 136 countries)
 - **Bitext Travel Q&A** (31,658 question-answer pairs)
 - **TripAdvisor Reviews** (980 reviews)
 - **World Cities Data** (32,400 cities)

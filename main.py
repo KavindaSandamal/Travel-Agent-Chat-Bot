@@ -66,7 +66,7 @@ class AdvancedAITravelChatbot:
         # Transformer Components
         self.transformer_pipeline = TravelTransformerPipeline()
         
-        # Generative AI Components
+        # Generative AI Components (RAG system will be populated later with enhanced dataset)
         self.rag_system = TravelRAGSystem()
         self.data_generator = TravelDataGenerator()
         self.feature_learner = TravelFeatureLearner(input_dim=50, encoding_dim=32)
@@ -90,16 +90,33 @@ class AdvancedAITravelChatbot:
             print(f"✅ Loaded Bitext: {len(self.bitext_data)} Q&A pairs")
             print(f"✅ Loaded TripAdvisor: {len(self.tripadvisor_data)} reviews")
             
-            # Load comprehensive travel destinations dataset
-            try:
+            # Load enhanced travel destinations dataset
+            if os.path.exists('data/enhanced_travel_destinations.csv'):
+                self.travel_destinations = pd.read_csv('data/enhanced_travel_destinations.csv')
+                print(f"✅ Loaded Enhanced Travel Destinations: {len(self.travel_destinations)} destinations")
+            elif os.path.exists('data/comprehensive_travel_destinations.csv'):
                 self.travel_destinations = pd.read_csv('data/comprehensive_travel_destinations.csv')
                 print(f"✅ Loaded Travel Destinations: {len(self.travel_destinations)} destinations")
-            except FileNotFoundError:
-                print("⚠️ Comprehensive travel destinations dataset not found")
+            else:
+                print("⚠️ No travel destinations dataset found")
                 self.travel_destinations = None
+            
+            # Load enhanced Sri Lanka guide dataset
+            if os.path.exists('data/enhanced_sri_lanka_guide.csv'):
+                self.sri_lanka_guide = pd.read_csv('data/enhanced_sri_lanka_guide.csv')
+                print(f"✅ Loaded Enhanced Sri Lanka Guide: {len(self.sri_lanka_guide)} destinations")
+            elif os.path.exists('data/sri_lanka_travel_guide.csv'):
+                self.sri_lanka_guide = pd.read_csv('data/sri_lanka_travel_guide.csv')
+                print(f"✅ Loaded Sri Lanka Guide: {len(self.sri_lanka_guide)} destinations")
+            else:
+                print("⚠️ No Sri Lanka guide dataset found")
+                self.sri_lanka_guide = None
                 
         except FileNotFoundError as e:
             print(f"⚠️ Dataset not found: {e}")
+            self._create_sample_data()
+        except Exception as e:
+            print(f"⚠️ Error loading datasets: {e}")
             self._create_sample_data()
         
         # Process data with NLP
@@ -114,10 +131,15 @@ class AdvancedAITravelChatbot:
         self.embedding_generator.create_tfidf_embeddings(sample_texts)
         self.embedding_generator.load_sentence_transformer()
         
-        # Populate RAG system
-        print("📚 Populating RAG system...")
+        # Populate RAG system with enhanced dataset
+        print("📚 Populating RAG system with enhanced dataset...")
         travel_docs = self._create_travel_documents()
         self.rag_system.add_documents(travel_docs)
+        
+        # Load enhanced dataset into RAG system for better responses
+        if self.travel_destinations is not None:
+            print("🔄 Loading enhanced dataset into RAG system...")
+            self.rag_system.load_enhanced_dataset()
         
         print("✅ Data processing completed!")
     
@@ -156,29 +178,72 @@ class AdvancedAITravelChatbot:
         print("✅ Sample data created!")
     
     def _create_travel_documents(self) -> List[Dict]:
-        """Create travel documents for RAG system."""
-        return [
-            {
-                'content': 'Paris is the capital of France, known for its art, fashion, and cuisine. Must-visit attractions include the Eiffel Tower, Louvre Museum, and Notre-Dame Cathedral. Best time to visit is spring or fall.',
-                'metadata': {'destination': 'Paris', 'country': 'France', 'type': 'destination_info'}
-            },
-            {
-                'content': 'Tokyo is Japan\'s capital, blending traditional culture with modern technology. Key attractions include Senso-ji Temple, Tokyo Skytree, and Tsukiji Fish Market. Great for food lovers and tech enthusiasts.',
-                'metadata': {'destination': 'Tokyo', 'country': 'Japan', 'type': 'destination_info'}
-            },
-            {
-                'content': 'London is the capital of England, famous for its history, royal heritage, and world-class museums. Must-see places include Buckingham Palace, British Museum, and Tower of London.',
-                'metadata': {'destination': 'London', 'country': 'England', 'type': 'destination_info'}
-            },
-            {
-                'content': 'New York City offers Broadway shows, world-class museums, Central Park, and diverse neighborhoods. Perfect for culture, entertainment, and urban exploration.',
-                'metadata': {'destination': 'New York', 'country': 'USA', 'type': 'destination_info'}
-            },
-            {
-                'content': 'Sydney is a harbor city with the iconic Opera House, beautiful beaches, and outdoor lifestyle. Visit Bondi Beach, Sydney Harbour Bridge, and enjoy seafood.',
-                'metadata': {'destination': 'Sydney', 'country': 'Australia', 'type': 'destination_info'}
-            }
-        ]
+        """Create travel documents for RAG system from enhanced dataset."""
+        documents = []
+        
+        if self.travel_destinations is not None:
+            # Use the enhanced travel destinations dataset
+            print(f"📚 Creating documents from enhanced dataset ({len(self.travel_destinations)} destinations)...")
+            
+            # Sample first 100 destinations for RAG system (for performance)
+            sample_size = min(100, len(self.travel_destinations))
+            sample_destinations = self.travel_destinations.head(sample_size)
+            
+            for idx, row in sample_destinations.iterrows():
+                content = f"Destination: {row['destination']}, Country: {row['country']}, Category: {row['category']}, Attractions: {row['attractions']}, Best Time: {row['best_time']}, Budget: {row['budget']}, Daily Cost: {row['daily_cost']}, Description: {row['description']}"
+                metadata = {
+                    'destination': row['destination'],
+                    'country': row['country'],
+                    'category': row['category'],
+                    'rating': row['rating'],
+                    'reviews': row['reviews'],
+                    'type': 'destination_info'
+                }
+                documents.append({'content': content, 'metadata': metadata})
+            
+            print(f"✅ Created {len(documents)} documents from enhanced dataset")
+        
+        # Add Sri Lanka destinations if available
+        if hasattr(self, 'sri_lanka_guide') and self.sri_lanka_guide is not None:
+            print(f"🇱🇰 Adding Sri Lanka destinations ({len(self.sri_lanka_guide)} destinations)...")
+            
+            # Sample first 50 Sri Lanka destinations for RAG system (for performance)
+            sample_size = min(50, len(self.sri_lanka_guide))
+            sample_sri_lanka = self.sri_lanka_guide.head(sample_size)
+            
+            for idx, row in sample_sri_lanka.iterrows():
+                content = f"Destination: {row['destination']}, Country: {row['country']}, Category: {row['category']}, Attractions: {row['attractions']}, Best Time: {row['best_time']}, Budget: {row['budget']}, Daily Cost: {row['daily_cost']}, Description: {row['description']}"
+                metadata = {
+                    'destination': row['destination'],
+                    'country': row['country'],
+                    'category': row['category'],
+                    'rating': row['rating'],
+                    'reviews': row['reviews'],
+                    'type': 'sri_lanka_info'
+                }
+                documents.append({'content': content, 'metadata': metadata})
+            
+            print(f"✅ Added {len(sample_sri_lanka)} Sri Lanka documents")
+        
+        if not documents:
+            # Fallback to sample data if no dataset available
+            print("⚠️ No enhanced dataset available, using sample data")
+            documents = [
+                {
+                    'content': 'Paris is the capital of France, known for its art, fashion, and cuisine. Must-visit attractions include the Eiffel Tower, Louvre Museum, and Notre-Dame Cathedral. Best time to visit is spring or fall.',
+                    'metadata': {'destination': 'Paris', 'country': 'France', 'type': 'destination_info'}
+                },
+                {
+                    'content': 'Tokyo is Japan\'s capital, blending traditional culture with modern technology. Key attractions include Senso-ji Temple, Tokyo Skytree, and Tsukiji Fish Market. Great for food lovers and tech enthusiasts.',
+                    'metadata': {'destination': 'Tokyo', 'country': 'Japan', 'type': 'destination_info'}
+                },
+                {
+                    'content': 'London is the capital of England, famous for its history, royal heritage, and world-class museums. Must-see places include Buckingham Palace, British Museum, and Tower of London.',
+                    'metadata': {'destination': 'London', 'country': 'England', 'type': 'destination_info'}
+                }
+            ]
+        
+        return documents
     
     def _train_models(self):
         """Train all AI models."""

@@ -39,42 +39,305 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# Beautiful Modern CSS
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 3rem;
-        font-weight: bold;
-        text-align: center;
-        color: #1f77b4;
-        margin-bottom: 2rem;
+    /* Import Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    /* Global Styles */
+    .main {
+        font-family: 'Inter', sans-serif;
     }
+    
+    /* General Text Color Fixes */
+    .main p {
+        color: #4a5568 !important;
+    }
+    
+    .main div {
+        color: #4a5568 !important;
+    }
+    
+    .main span {
+        color: #4a5568 !important;
+    }
+    
+    /* Header Styles */
+    .main-header {
+        font-size: 3.5rem;
+        font-weight: 700;
+        text-align: center;
+        color: #2d3748;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
     .sub-header {
+        font-size: 1.3rem;
+        text-align: center;
+        color: #4a5568;
+        margin-bottom: 2rem;
+        font-weight: 400;
+    }
+    
+    /* Chat Container */
+    .chat-container {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+        border: 1px solid #e2e8f0;
+    }
+    
+    /* Message Styles */
+    .chat-message {
+        padding: 1.5rem;
+        border-radius: 20px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        animation: slideIn 0.3s ease-out;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .chat-message::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: #38a169;
+    }
+    
+    .user-message {
+        background: #f7fafc;
+        color: #2d3748;
+        margin-left: 20%;
+        border-left: 4px solid #4a5568;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .bot-message {
+        background: #f0fff4;
+        color: #2d3748;
+        margin-right: 20%;
+        border-left: 4px solid #38a169;
+        border: 1px solid #c6f6d5;
+    }
+    
+    /* Input Styles */
+    .stTextInput > div > div > input {
+        border-radius: 25px !important;
+        border: 2px solid #e9ecef !important;
+        padding: 12px 20px !important;
+        font-size: 16px !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .stTextInput > div > div > input:focus {
+        border-color: #38a169 !important;
+        box-shadow: 0 0 0 3px rgba(56, 161, 105, 0.1) !important;
+    }
+    
+    /* Button Styles */
+    .stButton > button {
+        background: #38a169;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(56, 161, 105, 0.2);
+    }
+    
+    .stButton > button:hover {
+        background: #2f855a;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(56, 161, 105, 0.3);
+    }
+    
+    /* Metric Cards */
+    .metric-card {
+        background: #ffffff;
+        color: #2d3748;
+        padding: 2rem;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        text-align: center;
+        transition: transform 0.3s ease;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .ai-concept {
+        background: #f0fff4;
+        color: #2d3748;
+        padding: 1.5rem;
+        border-radius: 15px;
+        border: 1px solid #c6f6d5;
+        margin: 0.5rem 0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    .response-box {
+        background: #ffffff;
+        padding: 1.5rem;
+        border-radius: 15px;
+        border: 1px solid #e2e8f0;
+        margin: 1rem 0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    .response-box h3 {
+        color: #2d3748 !important;
         font-size: 1.5rem;
-        font-weight: bold;
-        color: #2e8b57;
-        margin-top: 1rem;
+        font-weight: 600;
         margin-bottom: 1rem;
     }
-    .metric-card {
-        background-color: #f0f2f6;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #1f77b4;
+    
+    .response-box p {
+        color: #4a5568 !important;
+        font-size: 1rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
     }
-    .ai-concept {
-        background-color: #e8f4fd;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #2e8b57;
-        margin: 0.5rem 0;
-    }
-    .response-box {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border: 1px solid #dee2e6;
+    
+    .response-box ul {
+        color: #4a5568 !important;
         margin: 1rem 0;
+        padding-left: 1.5rem;
+    }
+    
+    .response-box li {
+        color: #4a5568 !important;
+        font-size: 1rem;
+        line-height: 1.6;
+        margin-bottom: 0.5rem;
+    }
+    
+    .response-box strong {
+        color: #2d3748 !important;
+        font-weight: 600;
+    }
+    
+    /* Sidebar Styles */
+    .css-1d391kg {
+        background: #f7fafc;
+    }
+    
+    /* Sidebar Text Styles */
+    .css-1d391kg h3 {
+        color: #2d3748 !important;
+    }
+    
+    .css-1d391kg p {
+        color: #4a5568 !important;
+    }
+    
+    .css-1d391kg div {
+        color: #4a5568 !important;
+    }
+    
+    /* Progress Bar */
+    .stProgress > div > div > div > div {
+        background: #38a169;
+        border-radius: 10px;
+    }
+    
+    /* Animations */
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+    
+    /* Typing Indicator */
+    .typing-indicator {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        color: #6c757d;
+    }
+    
+    .typing-dots {
+        display: flex;
+        gap: 4px;
+        margin-left: 10px;
+    }
+    
+    .typing-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #667eea;
+        animation: typing 1.4s infinite ease-in-out;
+    }
+    
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    
+    @keyframes typing {
+        0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+        40% { transform: scale(1); opacity: 1; }
+    }
+    
+    /* Success/Info Messages */
+    .stSuccess {
+        background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        border-radius: 15px;
+        border: none;
+    }
+    
+    .stInfo {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        border: none;
+    }
+    
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Quick Action Buttons */
+    .quick-action {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 15px;
+        padding: 10px 20px;
+        margin: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+    }
+    
+    .quick-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -98,6 +361,23 @@ def initialize_session_state():
             'response_time': [],
             'user_satisfaction': []
         }
+    if 'quick_query' not in st.session_state:
+        st.session_state.quick_query = None
+    if 'is_typing' not in st.session_state:
+        st.session_state.is_typing = False
+
+def show_typing_indicator():
+    """Show typing indicator."""
+    st.markdown("""
+    <div class="typing-indicator">
+        🤖 TravelBot is thinking
+        <div class="typing-dots">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 def load_ai_components():
     """Load AI components if available with caching."""
@@ -124,10 +404,18 @@ def load_ai_components():
                 progress_bar.progress(25)
                 components['embedding_generator'] = WordEmbeddingGenerator()
                 
-                # 3. RAG System (slow - loads datasets)
-                status_text.text("Loading RAG System with travel data...")
+                # 3. RAG System (slow - loads enhanced datasets)
+                status_text.text("Loading RAG System with enhanced travel data...")
                 progress_bar.progress(50)
-                components['rag_system'] = TravelRAGSystem()
+                rag_system = TravelRAGSystem()
+                # Load enhanced dataset into RAG system
+                rag_system.load_enhanced_dataset()
+                components['rag_system'] = rag_system
+                
+                # Show dataset status
+                travel_count = len(rag_system.travel_destinations) if rag_system.travel_destinations is not None else 0
+                sri_lanka_count = len(rag_system.sri_lanka_guide) if rag_system.sri_lanka_guide is not None else 0
+                status_text.text(f"✅ Loaded {travel_count} travel destinations and {sri_lanka_count} Sri Lanka destinations")
                 
                 # 4. Transformer Pipeline (slow - loads BERT)
                 status_text.text("Loading Transformer Models...")
@@ -282,18 +570,39 @@ def process_query_advanced(query: str, components: Dict) -> Dict[str, Any]:
         
         # Step 4: Generate Response with conversation context
         if relevant_docs:
-            # Add conversation context to the query for better responses
-            contextual_query = query
+            # Extract conversation context for comprehensive filtering
+            conversation_context = []
             if context_messages:
-                # Extract key topics from recent conversation
-                recent_topics = []
-                for msg in context_messages:
+                # Extract user messages from recent conversation (last 3 messages only)
+                recent_messages = context_messages[-6:]  # Last 6 messages (3 user + 3 bot pairs)
+                for msg in recent_messages:
                     if msg['type'] == 'user':
-                        recent_topics.append(msg['content'])
-                if recent_topics:
-                    contextual_query = f"Previous context: {' '.join(recent_topics[-2:])}. Current query: {query}"
+                        conversation_context.append(msg['content'])
+                
+                # Only use context if the current query is very short AND seems like a follow-up
+                # For longer, specific queries, don't use context
+                if len(query.split()) > 2:  # If query has more than 2 words, it's likely specific
+                    conversation_context = []
+                elif len(query.split()) == 1:  # Single word queries
+                    # Check if it's a category word that might be a follow-up
+                    category_words = ['beaches', 'cultural', 'natural', 'adventure', 'modern', 'budget', 'luxury']
+                    if query.lower() in category_words:
+                        # For category words, be very conservative about maintaining context
+                        # Only maintain context if the previous query was asking for the same category
+                        if len(conversation_context) > 0:
+                            prev_query = conversation_context[-1].lower()
+                            # Only maintain context if the previous query was asking for the same category
+                            # AND was very recent (within last 2 messages)
+                            if (query.lower() in prev_query and 
+                                len(conversation_context) <= 2 and
+                                any(region in prev_query for region in ['asia', 'europe', 'america', 'africa'])):
+                                # Keep context only if it's a clear continuation
+                                pass
+                            else:
+                                conversation_context = []
             
-            response = components['rag_system'].generate_response(contextual_query, relevant_docs)
+            # Pass conversation context to the RAG system
+            response = components['rag_system'].generate_response(query, relevant_docs, conversation_context)
         else:
             response = intent_result['response']
         
@@ -338,6 +647,20 @@ def display_ai_concepts():
     
     # Store fast mode in session state
     st.session_state.fast_mode = fast_mode
+    
+    # Display enhanced dataset information
+    st.sidebar.markdown("## 📊 Enhanced Dataset")
+    if 'ai_components' in st.session_state and st.session_state.ai_components:
+        rag_system = st.session_state.ai_components.get('rag_system')
+        if rag_system:
+            travel_count = len(rag_system.travel_destinations) if rag_system.travel_destinations is not None else 0
+            sri_lanka_count = len(rag_system.sri_lanka_guide) if rag_system.sri_lanka_guide is not None else 0
+            st.sidebar.success(f"🌍 {travel_count:,} Travel Destinations")
+            st.sidebar.success(f"🇱🇰 {sri_lanka_count:,} Sri Lanka Destinations")
+        else:
+            st.sidebar.info("📊 Loading enhanced datasets...")
+    else:
+        st.sidebar.info("📊 Enhanced datasets will load when you start chatting")
     
     st.sidebar.markdown("## 🎓 Advanced AI Concepts")
     
@@ -409,9 +732,54 @@ def main():
     # Initialize session state
     initialize_session_state()
     
-    # Header
-    st.markdown('<h1 class="main-header">🌍 Advanced AI Travel Advisor Chatbot</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align: center; font-size: 1.2rem; color: #666;">🎓 Academic Assignment - Advanced AI Course</p>', unsafe_allow_html=True)
+    # Beautiful Header
+    st.markdown('<h1 class="main-header">🌍 Advanced AI Travel Advisor</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-header">Powered by 6,649+ Destinations</p>', unsafe_allow_html=True)
+    
+    # Quick Action Buttons
+    st.markdown("### 🚀 Quick Actions")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        if st.button("🏝️ Best Places Sri Lanka", key="quick_sri_lanka"):
+            st.session_state.quick_query = "best places to visit in Sri Lanka"
+            st.rerun()
+    
+    with col2:
+        if st.button("🌍 Top Destinations", key="quick_destinations"):
+            st.session_state.quick_query = "top travel destinations in the world"
+            st.rerun()
+    
+    with col3:
+        if st.button("💰 Budget Travel", key="quick_budget"):
+            st.session_state.quick_query = "budget travel destinations"
+            st.rerun()
+    
+    with col4:
+        if st.button("🏛️ Cultural Sites", key="quick_cultural"):
+            st.session_state.quick_query = "best cultural destinations"
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # Welcome message for new users
+    if not st.session_state.chat_history:
+        st.markdown("""
+        <div class="response-box">
+            <h3>🌟 Welcome to Advanced AI Travel Advisor!</h3>
+            <p>I'm your intelligent travel companion powered by advanced AI technologies including:</p>
+            <ul>
+                <li>🧠 Natural Language Processing (NLP)</li>
+                <li>🔤 Word Embedding Methods</li>
+                <li>🤖 Transformer-based Models & LLMs</li>
+                <li>🎨 Generative AI (RAG, Autoencoders, GANs)</li>
+                <li>🎯 Few-shot Learning</li>
+                <li>📝 Advanced Prompt Engineering</li>
+            </ul>
+            <p><strong>I have access to 6,649+ travel destinations and 2,435 Sri Lanka destinations!</strong></p>
+            <p>Try asking me about destinations, comparing places, or getting travel recommendations!</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Sidebar
     display_ai_concepts()
@@ -424,21 +792,57 @@ def main():
     with col1:
         st.markdown('<h2 class="sub-header">💬 Chat with TravelBot</h2>', unsafe_allow_html=True)
         
-        # Chat input
+        # Enhanced chat input
+        st.markdown("### 💬 Ask TravelBot Anything")
         user_input = st.text_input(
-            "Ask me anything about travel!",
-            placeholder="e.g., 'Tell me about Paris' or 'Compare Tokyo and London'",
-            key="user_input"
+            "Ask TravelBot",
+            placeholder="🌍 Ask about destinations, compare places, get travel tips...",
+            key="user_input",
+            help="Powered by 6,649+ destinations and advanced AI",
+            label_visibility="collapsed"
         )
         
-        # Send button
-        if st.button("Send", type="primary"):
+        # Handle quick query
+        if st.session_state.quick_query:
+            user_input = st.session_state.quick_query
+            st.session_state.quick_query = None
+            # Automatically process the quick query
             if user_input and user_input.strip():
                 # Add to chat history
                 st.session_state.chat_history.append({
                     'type': 'user',
                     'content': user_input,
-                    'timestamp': datetime.now()
+                    'timestamp': datetime.now().strftime("%H:%M")
+                })
+                
+                # Process the query
+                with st.spinner("🤖 TravelBot is thinking..."):
+                    st.session_state.is_typing = True
+                    components = load_ai_components()
+                    result = process_query_advanced(user_input, components)
+                    st.session_state.is_typing = False
+                    
+                    # Extract the actual response text from the result dictionary
+                    response = result.get('response', 'Sorry, I could not process your request.')
+                    
+                    # Add bot response to chat history
+                    st.session_state.chat_history.append({
+                        'type': 'bot',
+                        'content': response,
+                        'timestamp': datetime.now().strftime("%H:%M")
+                    })
+                
+                # Clear the input and rerun
+                st.rerun()
+        
+        # Enhanced send button
+        if st.button("🚀 Send Message", type="primary"):
+            if user_input and user_input.strip():
+                # Add to chat history
+                st.session_state.chat_history.append({
+                    'type': 'user',
+                    'content': user_input,
+                    'timestamp': datetime.now().strftime("%H:%M")
                 })
                 
                 # Process query
@@ -461,11 +865,12 @@ def main():
                 
                 response_time = time.time() - start_time
                 
-                # Add response to chat history
+                # Extract response text and add to chat history
+                response_text = result.get('response', 'Sorry, I could not process your request.')
                 st.session_state.chat_history.append({
                     'type': 'assistant',
-                    'content': result['response'],
-                    'timestamp': datetime.now(),
+                    'content': response_text,
+                    'timestamp': datetime.now().strftime("%H:%M"),
                     'metadata': {
                         'intent': result.get('intent', 'unknown'),
                         'confidence': result.get('confidence', 0.0),
@@ -481,24 +886,32 @@ def main():
                 # Clear input by rerunning
                 st.rerun()
         
-        # Display chat history
+        # Display chat history with beautiful styling
         for message in reversed(st.session_state.chat_history[-10:]):  # Show last 10 messages
             if message['type'] == 'user':
-                st.markdown(f"**👤 You:** {message['content']}")
+                st.markdown(f"""
+                <div class="chat-message user-message">
+                    <strong>👤 You:</strong> {message['content']}
+                </div>
+                """, unsafe_allow_html=True)
             else:
-                st.markdown(f"**🤖 TravelBot:** {message['content']}")
+                st.markdown(f"""
+                <div class="chat-message bot-message">
+                    <strong>🤖 TravelBot:</strong> {message['content']}
+                </div>
+                """, unsafe_allow_html=True)
                 
                 # Show metadata if available
                 if 'metadata' in message:
                     metadata = message['metadata']
-                    with st.expander("🔍 AI Analysis Details"):
+                    with st.expander("🔍 AI Analysis Details", expanded=False):
                         col_a, col_b = st.columns(2)
                         with col_a:
-                            st.write(f"**Intent:** {metadata['intent']}")
-                            st.write(f"**Confidence:** {metadata['confidence']:.3f}")
+                            st.markdown(f"**🎯 Intent:** {metadata['intent']}")
+                            st.markdown(f"**📊 Confidence:** {metadata['confidence']:.3f}")
                         with col_b:
-                            st.write(f"**Response Time:** {metadata['response_time']:.2f}s")
-                            st.write(f"**AI Techniques:** {', '.join(metadata['ai_techniques'])}")
+                            st.markdown(f"**⏱️ Response Time:** {metadata['response_time']:.2f}s")
+                            st.markdown(f"**🧠 AI Techniques:** {', '.join(metadata['ai_techniques'])}")
         
         # Example questions
         st.markdown('<h3 class="sub-header">💡 Example Questions</h3>', unsafe_allow_html=True)
@@ -519,7 +932,7 @@ def main():
                     st.session_state.chat_history.append({
                         'type': 'user',
                         'content': question,
-                        'timestamp': datetime.now()
+                        'timestamp': datetime.now().strftime("%H:%M")
                     })
                     
                     # Process the example question
@@ -542,11 +955,12 @@ def main():
                     
                     response_time = time.time() - start_time
                     
-                    # Add response to chat history
+                    # Extract response text and add to chat history
+                    response_text = result.get('response', 'Sorry, I could not process your request.')
                     st.session_state.chat_history.append({
                         'type': 'assistant',
-                        'content': result['response'],
-                        'timestamp': datetime.now(),
+                        'content': response_text,
+                        'timestamp': datetime.now().strftime("%H:%M"),
                         'metadata': {
                             'intent': result.get('intent', 'unknown'),
                             'confidence': result.get('confidence', 0.0),
@@ -603,11 +1017,20 @@ def main():
         if st.session_state.chat_history:
             chat_data = []
             for msg in st.session_state.chat_history:
+                # Clean metadata to ensure JSON serialization
+                metadata = msg.get('metadata', {})
+                clean_metadata = {}
+                for key, value in metadata.items():
+                    if isinstance(value, datetime):
+                        clean_metadata[key] = value.isoformat()
+                    else:
+                        clean_metadata[key] = value
+                
                 chat_data.append({
-                    'timestamp': msg['timestamp'].isoformat(),
+                    'timestamp': msg['timestamp'],  # Already a string from strftime
                     'type': msg['type'],
                     'content': msg['content'],
-                    'metadata': msg.get('metadata', {})
+                    'metadata': clean_metadata
                 })
             
             json_data = json.dumps(chat_data, indent=2)
@@ -622,7 +1045,7 @@ def main():
     st.markdown("---")
     st.markdown("""
     <div style="text-align: center; color: #666; font-size: 0.9rem;">
-        <p>🎓 Advanced AI Travel Advisor Chatbot - Academic Assignment</p>
+        <p>🎓 Advanced AI Travel Advisor Chatbot </p>
         <p>Demonstrating: NLP • Embeddings • Transformers • Generative AI • Few-shot Learning • Prompt Engineering • MLOps</p>
     </div>
     """, unsafe_allow_html=True)

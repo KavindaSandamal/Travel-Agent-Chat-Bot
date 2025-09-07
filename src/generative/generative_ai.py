@@ -170,14 +170,29 @@ class TravelRAGSystem:
             self.chroma_client = None
             self.collection = None
         
-        # Load comprehensive travel destinations dataset
+        # Note: Dataset loading is now controlled by main.py to use enhanced dataset
+        # self._load_travel_destinations()  # Commented out to allow main.py to control dataset loading
+    
+    def load_enhanced_dataset(self):
+        """Load the enhanced travel destinations dataset."""
         self._load_travel_destinations()
     
     def _load_travel_destinations(self):
         """Load comprehensive travel destinations dataset efficiently."""
         try:
             # Load the comprehensive travel destinations dataset
-            if os.path.exists('data/comprehensive_travel_destinations.csv'):
+            # Try to load enhanced dataset first, fallback to comprehensive dataset
+            if os.path.exists('data/enhanced_travel_destinations.csv'):
+                self.travel_destinations = pd.read_csv('data/enhanced_travel_destinations.csv')
+                print(f"✅ Loaded {len(self.travel_destinations)} enhanced travel destinations from dataset")
+                
+                # Also load enhanced Sri Lanka specific guide if available
+                if os.path.exists('data/enhanced_sri_lanka_guide.csv'):
+                    self.sri_lanka_guide = pd.read_csv('data/enhanced_sri_lanka_guide.csv')
+                    print(f"✅ Loaded {len(self.sri_lanka_guide)} enhanced Sri Lanka destinations from guide")
+                else:
+                    self.sri_lanka_guide = None
+            elif os.path.exists('data/comprehensive_travel_destinations.csv'):
                 self.travel_destinations = pd.read_csv('data/comprehensive_travel_destinations.csv')
                 print(f"✅ Loaded {len(self.travel_destinations)} travel destinations from dataset")
                 
@@ -187,8 +202,13 @@ class TravelRAGSystem:
                     print(f"✅ Loaded {len(self.sri_lanka_guide)} Sri Lanka destinations from guide")
                 else:
                     self.sri_lanka_guide = None
-                
-                # Convert to documents for RAG system (sample first 500 for faster loading)
+            else:
+                print("⚠️ No travel destinations dataset found")
+                self.travel_destinations = None
+                self.sri_lanka_guide = None
+            
+            # Convert to documents for RAG system (sample first 500 for faster loading)
+            if self.travel_destinations is not None:
                 documents = []
                 sample_size = min(500, len(self.travel_destinations))  # Limit to 500 for faster loading
                 sample_destinations = self.travel_destinations.head(sample_size)
@@ -207,10 +227,6 @@ class TravelRAGSystem:
                 # Add to knowledge base
                 self.add_documents(documents)
                 print(f"✅ Added {len(documents)} documents to knowledge base (sampled for performance)")
-                
-            else:
-                print("⚠️ Comprehensive travel destinations dataset not found")
-                self.travel_destinations = None
                 
         except Exception as e:
             print(f"⚠️ Error loading travel destinations: {e}")
@@ -324,48 +340,81 @@ class TravelRAGSystem:
         results.sort(key=lambda x: x['similarity_score'], reverse=True)
         return results[:k]
     
-    def generate_response(self, query: str, context: List[Dict]) -> str:
+    def generate_response(self, query: str, context: List[Dict], conversation_context: List[str] = None) -> str:
         """
-        Generate response using retrieved context and real dataset.
+        Generate response using retrieved context and real dataset with conversation history.
         
         Args:
             query (str): User query
             context (List[Dict]): Retrieved context documents
+            conversation_context (List[str]): Previous conversation messages for context
             
         Returns:
             str: Generated response
         """
-        if not context:
-            return "I don't have enough information to answer your question."
-        
         # Filter context for travel-related content only
         travel_context = []
-        for doc in context:
-            content = doc.get('content', '')
-            # Only include content that seems travel-related and doesn't contain irrelevant keywords
-            if (any(keyword in content.lower() for keyword in ['travel', 'destination', 'visit', 'trip', 'tourist', 'attraction', 'hotel', 'restaurant', 'culture', 'city', 'country', 'beach', 'temple', 'museum', 'food', 'cuisine']) and
-                not any(irrelevant in content.lower() for irrelevant in ['health', 'education', 'government', 'ministry', 'programme', 'policy', 'research', 'study', 'report', 'analysis'])):
-                travel_context.append(content)
+        if context:
+            for doc in context:
+                # Handle both string and dictionary context
+                if isinstance(doc, dict):
+                    content = doc.get('content', '')
+                else:
+                    content = str(doc)
+                
+                # Only include content that seems travel-related and doesn't contain irrelevant keywords
+                if (any(keyword in content.lower() for keyword in ['travel', 'destination', 'visit', 'trip', 'tourist', 'attraction', 'hotel', 'restaurant', 'culture', 'city', 'country', 'beach', 'temple', 'museum', 'food', 'cuisine']) and
+                    not any(irrelevant in content.lower() for irrelevant in ['health', 'education', 'government', 'ministry', 'programme', 'policy', 'research', 'study', 'report', 'analysis'])):
+                    travel_context.append(content)
         
         # If we have travel destinations dataset, use it to generate responses
         if self.travel_destinations is not None:
-            return self._generate_response_from_dataset(query, travel_context)
+            if conversation_context:
+                return self._generate_response_from_dataset(query, travel_context, conversation_context)
+            else:
+                return self._generate_response_from_dataset(query, travel_context)
         
         # Fallback to predefined responses
         return self._get_predefined_travel_response(query)
     
-    def _generate_response_from_dataset(self, query: str, context: List[str]) -> str:
+    def _generate_response_from_dataset(self, query: str, context: List[str], conversation_context: List[str] = None) -> str:
         """Generate response using our comprehensive travel destinations dataset."""
         query_lower = query.lower()
         
+        # Combine RAG context with conversation context
+        full_context = context.copy()
+        if conversation_context:
+            full_context.extend(conversation_context)
+        
+        # Extract conversation context and filters
+        conversation_filters = self._extract_conversation_filters(query_lower, full_context)
+        
         # Search for specific destinations in our dataset
-        if 'sri lanka' in query_lower:
+        # Only trigger Sri Lanka logic if explicitly mentioned, not for city names
+        if 'sri lanka' in query_lower and not any(city in query_lower for city in ['kandy', 'colombo', 'galle', 'anuradhapura', 'polonnaruwa', 'sigiriya', 'ella', 'nuwara eliya', 'trincomalee', 'batticaloa', 'jaffna', 'negombo', 'bentota', 'hikkaduwa', 'unawatuna', 'mirissa', 'tangalle', 'arugam bay']):
             sri_lanka_destinations = self.travel_destinations[self.travel_destinations['country'] == 'Sri Lanka']
             if len(sri_lanka_destinations) > 0:
+                # Check if this is a specific category request (like beaches or mountains)
+                if any(keyword in query_lower for keyword in ['beach', 'beaches', 'coastal', 'seaside', 'ocean', 'sea', 'surfing', 'diving', 'snorkeling']):
+                    # Apply beach filtering to Sri Lanka destinations
+                    conversation_filters['region'] = 'Sri Lanka'
+                    conversation_filters['category'] = 'Beach'
+                    filtered_destinations = self._apply_comprehensive_filters(conversation_filters)
+                    if len(filtered_destinations) > 0:
+                        return self._format_category_specific_recommendations(query_lower, conversation_filters)
+                elif any(keyword in query_lower for keyword in ['mountain', 'mountains', 'hill', 'hills', 'peak', 'peaks', 'summit', 'summits', 'range', 'ranges', 'ridge', 'ridges', 'knuckles', 'adam', 'pidurutalagala', 'kirigalpotta', 'totapolakanda', 'hakgala', 'horton', 'world\'s end', 'ella rock', 'little adam\'s peak']):
+                    # Apply mountain filtering to Sri Lanka destinations
+                    conversation_filters['region'] = 'Sri Lanka'
+                    conversation_filters['category'] = 'Natural'
+                    conversation_filters['interests'] = ['Mountains']  # Set interests to Mountains
+                    filtered_destinations = self._apply_comprehensive_filters(conversation_filters)
+                    if len(filtered_destinations) > 0:
+                        return self._format_category_specific_recommendations(query_lower, conversation_filters)
+                # Otherwise return general Sri Lanka response
                 return self._format_sri_lanka_response(sri_lanka_destinations)
         
         # Search for other specific countries or cities
-        for country in ['france', 'japan', 'italy', 'spain', 'germany', 'thailand', 'india', 'china']:
+        for country in ['france', 'japan', 'italy', 'spain', 'germany', 'thailand', 'india', 'china', 'egypt', 'kenya', 'morocco', 'nigeria', 'south africa', 'australia', 'canada', 'brazil', 'argentina', 'mexico', 'russia', 'turkey', 'saudi arabia', 'uae', 'israel', 'jordan', 'lebanon', 'iran', 'iraq', 'syria', 'afghanistan', 'pakistan', 'bangladesh', 'sri lanka', 'nepal', 'bhutan', 'myanmar', 'laos', 'cambodia', 'vietnam', 'malaysia', 'indonesia', 'philippines', 'brunei', 'mongolia', 'kazakhstan', 'kyrgyzstan', 'tajikistan', 'turkmenistan', 'uzbekistan']:
             if country in query_lower:
                 country_destinations = self.travel_destinations[
                     self.travel_destinations['country'].str.lower().str.contains(country, na=False)
@@ -373,17 +422,337 @@ class TravelRAGSystem:
                 if len(country_destinations) > 0:
                     return self._format_country_response(country_destinations, country.title())
         
-        # Search for specific cities
+        # Handle region-based queries (like "places to visit in africa")
+        # Only process region-based queries if no specific city is mentioned
+        if conversation_filters.get('region') and not any(city in query_lower for city in ['kandy', 'colombo', 'galle', 'anuradhapura', 'polonnaruwa', 'sigiriya', 'ella', 'nuwara eliya', 'los angeles', 'new york', 'london', 'paris', 'tokyo', 'rome', 'madrid', 'berlin', 'bangkok', 'mumbai', 'beijing', 'sydney', 'toronto', 'dubai', 'singapore', 'seoul', 'amsterdam', 'vienna', 'prague', 'budapest', 'istanbul', 'cairo', 'cape town', 'nairobi', 'lagos', 'rio de janeiro', 'buenos aires', 'mexico city']):
+            region = conversation_filters['region']
+            if region in ['africa', 'asia', 'europe', 'america', 'oceania']:
+                # Get destinations from that region
+                region_destinations = self._filter_destinations_by_region(region)
+                if len(region_destinations) > 0:
+                    return self._format_country_response(region_destinations, region.title())
+        
+        # Search for specific cities - prioritize city matches even if region is detected
+        city_matches = []
         for idx, row in self.travel_destinations.iterrows():
             destination = row['destination'].lower()
-            if destination in query_lower:
-                return self._format_destination_response(row)
+            # Match if the destination name appears in the query (more flexible matching)
+            if destination in query_lower or query_lower in destination:
+                city_matches.append(row)
         
-        # If no specific match, provide general recommendations
-        return self._format_general_recommendations(query_lower)
+        # If we found specific city matches, handle them
+        if city_matches:
+            # If it's a general query like "places to visit in kandy", show multiple destinations
+            if any(keyword in query_lower for keyword in ['places to visit', 'destinations in', 'things to see', 'attractions in']):
+                # Filter to destinations in the same city/country as the first match
+                first_match = city_matches[0]
+                city_name = first_match['destination']
+                country_name = first_match['country']
+                
+                # Get all destinations in the same city/country
+                city_destinations = self.travel_destinations[
+                    (self.travel_destinations['destination'].str.lower().str.contains(city_name.lower(), na=False)) |
+                    (self.travel_destinations['country'] == country_name)
+                ]
+                
+                if len(city_destinations) > 0:
+                    return self._format_country_response(city_destinations, city_name)
+            else:
+                # For specific destination queries, return the first match
+                return self._format_destination_response(city_matches[0])
+        
+        # If no city matches found but query mentions a specific city, provide helpful message
+        if any(keyword in query_lower for keyword in ['places to visit', 'destinations in', 'things to see', 'attractions in']):
+            # Check if query mentions a city that's not in our dataset
+            potential_cities = ['los angeles', 'new york', 'london', 'paris', 'tokyo', 'sydney', 'toronto', 'mumbai', 'dubai', 'singapore', 'bangkok', 'seoul', 'berlin', 'rome', 'madrid', 'amsterdam', 'vienna', 'prague', 'budapest', 'istanbul', 'cairo', 'cape town', 'nairobi', 'lagos', 'rio de janeiro', 'buenos aires', 'mexico city', 'lima', 'santiago', 'bogota', 'caracas', 'havana', 'kingston', 'nassau', 'san juan', 'ottawa', 'vancouver', 'montreal', 'calgary', 'edmonton', 'winnipeg', 'halifax', 'victoria', 'quebec city', 'hamilton', 'london', 'manchester', 'birmingham', 'glasgow', 'edinburgh', 'belfast', 'cardiff', 'bristol', 'liverpool', 'leeds', 'sheffield', 'newcastle', 'nottingham', 'leicester', 'coventry', 'bradford', 'hull', 'plymouth', 'stoke', 'wolverhampton', 'derby', 'swansea', 'southampton', 'salford', 'aberdeen', 'westminster', 'portsmouth', 'york', 'peterborough', 'dundee', 'lancaster', 'oxford', 'newport', 'preston', 'st albans', 'norwich', 'chester', 'cambridge', 'exeter', 'gloucester', 'bath', 'ipswich', 'brighton', 'blackpool', 'middlesbrough', 'bolton', 'stockport', 'oldham', 'rotherham', 'swindon', 'grimsby', 'huddersfield', 'poole', 'southport', 'birkenhead', 'worcester', 'hartlepool', 'halifax', 'wigan', 'rhondda', 'southend', 'maidstone', 'eastbourne', 'weston', 'tamworth', 'watford', 'macclesfield', 'rochdale', 'solihull', 'northampton', 'nuneaton', 'darlington', 'barry', 'stevenage', 'hartlepool', 'hemel hempstead', 'saint helens', 'burnley', 'scunthorpe', 'grimsby', 'shrewsbury', 'lowestoft', 'rugby', 'walsall', 'margate', 'blackburn', 'clacton', 'harrogate', 'scarborough', 'gloucester', 'south shields', 'great yarmouth', 'bootle', 'scunthorpe', 'grimsby', 'morecambe', 'thornton', 'bexhill', 'folkestone', 'warrington', 'workington', 'rhyl', 'southsea', 'loughborough', 'guildford', 'chatham', 'eastleigh', 'cheshunt', 'salisbury', 'yeovil', 'carlisle', 'greenock', 'hastings', 'harlow', 'woking', 'southall', 'acton', 'ealing', 'harrow', 'uxbridge', 'enfield', 'barnet', 'croydon', 'bromley', 'lewisham', 'greenwich', 'hackney', 'tower hamlets', 'newham', 'waltham forest', 'redbridge', 'havering', 'barking', 'dagenham', 'hillingdon', 'hounslow', 'richmond', 'kingston', 'merton', 'wandsworth', 'lambeth', 'southwark', 'camden', 'islington', 'haringey', 'kensington', 'chelsea', 'hammersmith', 'fulham', 'westminster', 'city of london']
+            
+            for city in potential_cities:
+                if city in query_lower:
+                    return f"🌍 **Travel Assistance for {city.title()}**\n\nI'd be happy to help with your travel query! However, I don't have specific information about {city.title()} in my current knowledge base.\n\n**What I can help you with instead:**\n• General travel advice and tips\n• Destination recommendations from our available dataset\n• Budget planning and travel tips\n• Best time to visit various destinations\n• Must-see attractions in destinations we have data for\n\n**Popular destinations I can help with:**\n• Sri Lanka - Cultural sites, beaches, wildlife\n• Various Asian destinations - Modern cities, cultural sites\n• European destinations - History, art, cuisine\n\nCould you try asking about a destination I have information about, or would you like general travel advice?"
+        
+        # If no specific match, provide general recommendations with all filters
+        return self._format_general_recommendations(query_lower, conversation_filters)
+    
+    def _get_region_filter(self, query_lower: str) -> str:
+        """Determine region filter from query."""
+        # Asian countries
+        asian_countries = [
+            'china', 'japan', 'south korea', 'north korea', 'india', 'pakistan', 'bangladesh', 
+            'sri lanka', 'nepal', 'bhutan', 'myanmar', 'thailand', 'laos', 'cambodia', 
+            'vietnam', 'malaysia', 'singapore', 'indonesia', 'philippines', 'brunei', 
+            'mongolia', 'kazakhstan', 'kyrgyzstan', 'tajikistan', 'turkmenistan', 'uzbekistan',
+            'afghanistan', 'iran', 'iraq', 'syria', 'lebanon', 'jordan', 'israel', 
+            'palestine', 'saudi arabia', 'yemen', 'oman', 'united arab emirates', 'qatar', 
+            'bahrain', 'kuwait', 'turkey', 'russia', 'georgia', 'armenia', 'azerbaijan'
+        ]
+        
+        # European countries
+        european_countries = [
+            'france', 'germany', 'italy', 'spain', 'portugal', 'netherlands', 'belgium', 
+            'switzerland', 'austria', 'poland', 'czech republic', 'hungary', 'romania', 
+            'bulgaria', 'greece', 'croatia', 'serbia', 'slovakia', 'slovenia', 'estonia', 
+            'latvia', 'lithuania', 'finland', 'sweden', 'norway', 'denmark', 'iceland', 
+            'ireland', 'united kingdom', 'ukraine', 'belarus', 'moldova', 'albania', 
+            'bosnia', 'macedonia', 'montenegro', 'kosovo', 'luxembourg', 'malta', 'cyprus'
+        ]
+        
+        # American countries
+        american_countries = [
+            'united states', 'canada', 'mexico', 'brazil', 'argentina', 'chile', 'peru', 
+            'colombia', 'venezuela', 'ecuador', 'bolivia', 'paraguay', 'uruguay', 'guyana', 
+            'suriname', 'french guiana', 'cuba', 'jamaica', 'haiti', 'dominican republic', 
+            'puerto rico', 'trinidad and tobago', 'barbados', 'bahamas', 'belize', 'costa rica', 
+            'panama', 'guatemala', 'honduras', 'el salvador', 'nicaragua'
+        ]
+        
+        # Oceania countries
+        oceania_countries = [
+            'australia', 'new zealand', 'fiji', 'papua new guinea', 'solomon islands', 
+            'vanuatu', 'samoa', 'tonga', 'micronesia', 'palau', 'marshall islands', 
+            'kiribati', 'tuvalu', 'nauru', 'cook islands', 'french polynesia', 'new caledonia'
+        ]
+        
+        # African countries
+        african_countries = [
+            'south africa', 'egypt', 'nigeria', 'kenya', 'morocco', 'algeria', 'tunisia', 
+            'libya', 'sudan', 'ethiopia', 'ghana', 'tanzania', 'uganda', 'cameroon', 
+            'ivory coast', 'madagascar', 'angola', 'mozambique', 'zambia', 'zimbabwe', 
+            'botswana', 'namibia', 'senegal', 'mali', 'burkina faso', 'niger', 'chad', 
+            'central african republic', 'democratic republic of congo', 'republic of congo', 
+            'gabon', 'equatorial guinea', 'sao tome and principe', 'rwanda', 'burundi', 
+            'somalia', 'djibouti', 'eritrea', 'mauritania', 'gambia', 'guinea-bissau', 
+            'sierra leone', 'liberia', 'togo', 'benin', 'malawi', 'lesotho', 'swaziland', 
+            'mauritius', 'seychelles', 'comoros', 'cape verde', 'sao tome'
+        ]
+        
+        # Check for region keywords
+        if any(keyword in query_lower for keyword in ['asia', 'asian', 'asiat']):
+            return 'asia'
+        elif any(keyword in query_lower for keyword in ['europe', 'european', 'europ']):
+            return 'europe'
+        elif any(keyword in query_lower for keyword in ['america', 'american', 'americas']):
+            return 'america'
+        elif any(keyword in query_lower for keyword in ['africa', 'african', 'afric']):
+            return 'africa'
+        elif any(keyword in query_lower for keyword in ['oceania', 'oceanic', 'australasia']):
+            return 'oceania'
+        
+        # Check for specific countries
+        if any(country in query_lower for country in asian_countries):
+            return 'asia'
+        elif any(country in query_lower for country in european_countries):
+            return 'europe'
+        elif any(country in query_lower for country in american_countries):
+            return 'america'
+        elif any(country in query_lower for country in african_countries):
+            return 'africa'
+        elif any(country in query_lower for country in oceania_countries):
+            return 'oceania'
+        
+        return None
+    
+    def _extract_conversation_filters(self, query_lower: str, context: List[str]) -> dict:
+        """Extract comprehensive filters from current query and conversation context."""
+        filters = {
+            'region': None,
+            'category': None,
+            'budget': None,
+            'season': None,
+            'travel_style': None,
+            'interests': [],
+            'group_type': None,
+            'duration': None
+        }
+        
+        # Combine current query with context for comprehensive analysis
+        full_context = ' '.join(context + [query_lower])
+        
+        # Check if this is a general destination query (like "places to visit in X")
+        is_general_destination_query = any(
+            keyword in query_lower for keyword in [
+                'places to visit', 'destinations in', 'things to see', 'attractions in',
+                'where to go', 'best places', 'top places', 'must see', 'must visit'
+            ]
+        )
+        
+        # Extract region filter - prioritize current query over context
+        current_region = self._get_region_filter(query_lower)
+        context_region = self._get_region_filter(' '.join(context))
+        
+        # Check if current query is asking about a specific destination
+        is_specific_destination_query = any(
+            keyword in query_lower for keyword in [
+                'tell me more about', 'more about', 'about', 'information about',
+                'details about', 'tell me about', 'what is', 'where is'
+            ]
+        )
+        
+        # Only use context region if current query doesn't specify a region AND it's not a specific destination query
+        if current_region:
+            filters['region'] = current_region
+        elif context_region and not is_specific_destination_query:
+            filters['region'] = context_region
+        
+        # Extract category/type filter
+        if any(keyword in full_context for keyword in ['beach', 'beaches', 'coastal', 'seaside', 'ocean', 'sea', 'surfing', 'diving', 'snorkeling']):
+            filters['category'] = 'Beach'  # Special handling for beach destinations
+        elif any(keyword in full_context for keyword in ['natural', 'nature', 'outdoor', 'wildlife', 'parks']):
+            filters['category'] = 'Natural'
+        elif any(keyword in full_context for keyword in ['cultural', 'culture', 'historical', 'heritage', 'museums', 'temples']):
+            filters['category'] = 'Cultural'
+        elif any(keyword in full_context for keyword in ['adventure', 'hiking', 'climbing', 'extreme', 'sports']):
+            filters['category'] = 'Adventure'
+        elif any(keyword in full_context for keyword in ['modern', 'city', 'urban', 'nightlife', 'shopping']):
+            filters['category'] = 'Modern'
+        
+        # Extract budget filter - prioritize current query over context
+        current_budget = None
+        context_budget = None
+        
+        if any(keyword in query_lower for keyword in ['budget', 'cheap', 'affordable', 'low cost', 'economical']):
+            current_budget = 'Budget'
+        elif any(keyword in query_lower for keyword in ['luxury', 'expensive', 'high-end', 'premium', 'deluxe']):
+            current_budget = 'Luxury'
+        elif any(keyword in query_lower for keyword in ['mid-range', 'moderate', 'medium']):
+            current_budget = 'Mid-range'
+        
+        if any(keyword in ' '.join(context) for keyword in ['budget', 'cheap', 'affordable', 'low cost', 'economical']):
+            context_budget = 'Budget'
+        elif any(keyword in ' '.join(context) for keyword in ['luxury', 'expensive', 'high-end', 'premium', 'deluxe']):
+            context_budget = 'Luxury'
+        elif any(keyword in ' '.join(context) for keyword in ['mid-range', 'moderate', 'medium']):
+            context_budget = 'Mid-range'
+        
+        # Only use context budget if current query doesn't specify a budget AND it's not a general destination query
+        if current_budget:
+            filters['budget'] = current_budget
+        elif context_budget and not is_general_destination_query:
+            filters['budget'] = context_budget
+        
+        # Extract season filter - only for specific queries, not general destination queries
+        if not is_general_destination_query:
+            if any(keyword in full_context for keyword in ['summer', 'warm', 'hot']):
+                filters['season'] = 'Summer'
+            elif any(keyword in full_context for keyword in ['winter', 'cold', 'snow']):
+                filters['season'] = 'Winter'
+            elif any(keyword in full_context for keyword in ['spring', 'bloom', 'flowers']):
+                filters['season'] = 'Spring'
+            elif any(keyword in full_context for keyword in ['fall', 'autumn', 'harvest']):
+                filters['season'] = 'Fall'
+        
+        # Extract travel style
+        if any(keyword in full_context for keyword in ['family', 'kids', 'children']):
+            filters['travel_style'] = 'Family'
+        elif any(keyword in full_context for keyword in ['romantic', 'honeymoon', 'couple']):
+            filters['travel_style'] = 'Romantic'
+        elif any(keyword in full_context for keyword in ['solo', 'alone', 'backpacking']):
+            filters['travel_style'] = 'Solo'
+        elif any(keyword in full_context for keyword in ['group', 'friends', 'party']):
+            filters['travel_style'] = 'Group'
+        
+        # Extract interests - only for specific queries, not general destination queries
+        interests = []
+        if not is_general_destination_query:
+            if any(keyword in full_context for keyword in ['food', 'cuisine', 'restaurant', 'dining']):
+                interests.append('Food')
+            if any(keyword in full_context for keyword in ['beach', 'coastal', 'ocean', 'sea']):
+                interests.append('Beach')
+            if any(keyword in full_context for keyword in ['mountain', 'hiking', 'trekking']):
+                interests.append('Mountains')
+            if any(keyword in full_context for keyword in ['shopping', 'market', 'mall']):
+                interests.append('Shopping')
+            if any(keyword in full_context for keyword in ['nightlife', 'bars', 'clubs']):
+                interests.append('Nightlife')
+            if any(keyword in full_context for keyword in ['photography', 'instagram', 'scenic']):
+                interests.append('Photography')
+        filters['interests'] = interests
+        
+        # Extract group type
+        if any(keyword in full_context for keyword in ['family', 'kids', 'children']):
+            filters['group_type'] = 'Family'
+        elif any(keyword in full_context for keyword in ['couple', 'romantic', 'honeymoon']):
+            filters['group_type'] = 'Couple'
+        elif any(keyword in full_context for keyword in ['solo', 'alone']):
+            filters['group_type'] = 'Solo'
+        elif any(keyword in full_context for keyword in ['friends', 'group']):
+            filters['group_type'] = 'Friends'
+        
+        # Extract duration
+        if any(keyword in full_context for keyword in ['weekend', '2 days', '3 days']):
+            filters['duration'] = 'Short'
+        elif any(keyword in full_context for keyword in ['week', '7 days', 'longer']):
+            filters['duration'] = 'Medium'
+        elif any(keyword in full_context for keyword in ['month', 'extended']):
+            filters['duration'] = 'Long'
+        
+        return filters
+    
+    def _clean_text(self, text: str) -> str:
+        """Clean and format text for better readability."""
+        import re
+        
+        if not text or text == 'nan' or text == 'None':
+            return "No description available"
+        
+        # Convert to string and clean
+        text = str(text)
+        
+        # Remove HTML tags
+        text = re.sub(r'<[^>]+>', '', text)
+        
+        # Fix common concatenation issues - more aggressive approach
+        # Split camelCase and ALLCAPS words
+        text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)  # camelCase
+        text = re.sub(r'([a-z])([A-Z][a-z])', r'\1 \2', text)  # word + Capitalized
+        text = re.sub(r'([a-z])([A-Z][A-Z])', r'\1 \2', text)  # word + ALLCAPS
+        
+        # Split numbers from letters
+        text = re.sub(r'([a-z])(\d)', r'\1 \2', text)  # letter + number
+        text = re.sub(r'(\d)([A-Z])', r'\1 \2', text)  # number + letter
+        text = re.sub(r'(\d)([a-z])', r'\1 \2', text)  # number + lowercase
+        
+        # Fix specific common patterns
+        text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)  # camelCase again
+        text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)  # camelCase again
+        
+        # Handle common concatenated words (lowercase)
+        common_words = [
+            'beautiful', 'natural', 'waterfall', 'bath', 'water', 'nice', 'clam', 'place', 'cold',
+            'nature', 'look', 'attention', 'please', 'think', 'protect', 'great', 'farm', 'coconut',
+            'grove', 'spice', 'lake', 'bird', 'flower', 'tree', 'specimen', 'bar', 'entrance',
+            'allow', 'least', 'two', 'hour', 'plant', 'ideal', 'visit', 'area', 'shop', 'park',
+            'photographer', 'scene', 'take', 'capture', 'network', 'walking', 'trail', 'deep',
+            'lush', 'observe', 'resident', 'migratory', 'every', 'single', 'time', 'travel',
+            'love', 'sri', 'lanka', 'bit', 'close', 'gala', 'sharing', 'southern', 'coastline',
+            'bundle', 'national', 'fewer', 'animal', 'safari', 'jeep', 'definitely', 'distance',
+            'display', 'nearest', 'mile', 'kilometer', 'midigama', 'beach', 'left', 'surf', 'break'
+        ]
+        
+        # Split concatenated words
+        for word in common_words:
+            # Look for word followed by another word (no space)
+            pattern = f'({word})([a-z]{{2,}})'
+            text = re.sub(pattern, r'\1 \2', text, flags=re.IGNORECASE)
+        
+        # Clean up spaces and special characters
+        text = re.sub(r'\s+', ' ', text)  # Multiple spaces to single
+        text = re.sub(r'[∣|]', ' | ', text)  # Replace pipe symbols
+        text = re.sub(r'[∗*]{2}', '**', text)  # Fix markdown bold
+        text = re.sub(r'[−–]', '-', text)  # Normalize dashes
+        
+        # Remove extra spaces around punctuation
+        text = re.sub(r'\s+([,.!?;:])', r'\1', text)
+        text = re.sub(r'([,.!?;:])\s+', r'\1 ', text)
+        
+        # Final cleanup
+        text = re.sub(r'\s+', ' ', text)  # Final space cleanup
+        
+        return text.strip()
     
     def _format_sri_lanka_response(self, sri_lanka_destinations) -> str:
         """Format Sri Lanka destinations response using dedicated guide."""
+        import pandas as pd
+        
         response = "🇱🇰 **Best Places to Visit in Sri Lanka**\n\n"
         
         # Use dedicated Sri Lanka guide if available
@@ -401,8 +770,20 @@ class TravelRAGSystem:
             response += f"**{category} Destinations:**\n"
             
             for idx, row in category_destinations.head(5).iterrows():
-                response += f"• **{row['destination']}** - {row['attractions']}\n"
-                response += f"  Budget: {row['budget']} ({row['daily_cost']}) | Rating: {row['rating']}/5\n"
+                # Clean up the attractions text
+                attractions = self._clean_text(row['attractions'])
+                
+                # Truncate long descriptions
+                if len(attractions) > 120:
+                    attractions = attractions[:120] + "..."
+                
+                # Clean up budget and daily cost
+                budget = self._clean_text(row['budget'])
+                daily_cost = self._clean_text(row['daily_cost'])
+                rating = self._clean_text(row['rating'])
+                
+                response += f"• **{row['destination']}** - {attractions}\n"
+                response += f"  Budget: {budget} ({daily_cost}) | Rating: {rating}/5\n"
             
             response += "\n"
         
@@ -416,15 +797,48 @@ class TravelRAGSystem:
     
     def _format_country_response(self, country_destinations, country_name) -> str:
         """Format country destinations response."""
+        import pandas as pd
         response = f"🌍 **Top Destinations in {country_name}**\n\n"
         response += f"Based on our travel dataset, here are the best places to visit in {country_name}:\n\n"
         
-        # Show top destinations by rating
-        top_destinations = country_destinations.nlargest(8, 'rating')
+        # Filter out accommodation-related destinations and prioritize actual tourist destinations
+        accommodation_keywords = [
+            'hotel', 'resort', 'inn', 'club', 'villa', 'spa', 'apartment', 'guest house', 
+            'hostel', 'lodge', 'camp', 'accommodation', 'stay', 'room', 'suite', 'bed',
+            'motel', 'b&b', 'bed and breakfast', 'guesthouse', 'auberge', 'minshuku',
+            'novotel', 'hyatt', 'hilton', 'marriott', 'sheraton', 'radisson', 'holiday inn',
+            'ramada', 'best western', 'comfort inn', 'quality inn', 'days inn', 'super 8',
+            'motel 6', 'red roof', 'la quinta', 'wyndham', 'courtyard', 'hampton', 'embassy',
+            'doubletree', 'westin', 'ritz', 'four seasons', 'mandarin', 'peninsula', 'shangri-la'
+        ]
+        
+        non_accommodation_destinations = country_destinations[
+            ~country_destinations['destination'].str.contains('|'.join(accommodation_keywords), case=False, na=False)
+        ]
+        
+        if len(non_accommodation_destinations) >= 6:
+            # Use non-accommodation destinations if we have enough
+            top_destinations = non_accommodation_destinations.nlargest(8, 'rating')
+        elif len(non_accommodation_destinations) > 0:
+            # Use available non-accommodation destinations plus some accommodation
+            non_accommodation_destinations = non_accommodation_destinations.nlargest(8, 'rating')
+            accommodation_destinations = country_destinations[
+                country_destinations['destination'].str.contains('|'.join(accommodation_keywords), case=False, na=False)
+            ].nlargest(2, 'rating')
+            top_destinations = pd.concat([non_accommodation_destinations, accommodation_destinations])
+        else:
+            # If no non-accommodation destinations, provide a helpful message
+            response += f"⚠️ **Note**: Our dataset for {country_name} primarily contains accommodation options rather than tourist attractions.\n\n"
+            response += f"Here are some accommodation options in {country_name}:\n\n"
+            top_destinations = country_destinations.nlargest(8, 'rating')
         
         for idx, row in top_destinations.iterrows():
             response += f"**{row['destination']}** ({row['category']})\n"
-            response += f"• {row['attractions']}\n"
+            # Handle NaN attractions
+            attractions = str(row['attractions']) if pd.notna(row['attractions']) else "No description available"
+            if len(attractions) > 100:
+                attractions = attractions[:100] + "..."
+            response += f"• {attractions}\n"
             response += f"• Budget: {row['budget']} ({row['daily_cost']}) | Rating: {row['rating']}/5 ({row['reviews']} reviews)\n"
             response += f"• Best time: {row['best_time']}\n\n"
         
@@ -450,22 +864,75 @@ class TravelRAGSystem:
         
         return response
     
-    def _format_general_recommendations(self, query_lower) -> str:
-        """Format general travel recommendations."""
+    def _format_general_recommendations(self, query_lower, conversation_filters=None) -> str:
+        """Format general travel recommendations with comprehensive filtering."""
+        import pandas as pd
         # Check if this is a follow-up to a previous recommendation
-        if any(keyword in query_lower for keyword in ['natural', 'cultural', 'adventure', 'modern']):
-            return self._format_category_specific_recommendations(query_lower)
+        if any(keyword in query_lower for keyword in ['natural', 'cultural', 'adventure', 'modern', 'beach', 'beaches', 'coastal', 'seaside', 'ocean', 'sea']):
+            return self._format_category_specific_recommendations(query_lower, conversation_filters)
         
-        # Get top-rated destinations
-        top_destinations = self.travel_destinations.nlargest(10, 'rating')
+        # Apply comprehensive filters
+        filtered_destinations = self._apply_comprehensive_filters(conversation_filters)
         
-        response = "🌍 **Travel Recommendations**\n\n"
-        response += "Based on our comprehensive travel dataset, here are some top-rated destinations:\n\n"
+        if len(filtered_destinations) == 0:
+            filter_summary = self._get_filter_summary(conversation_filters)
+            return f"🌍 **No destinations found matching your criteria**\n\n{filter_summary}\n\nI don't have destinations matching all these criteria in our current dataset. Please try adjusting your preferences or ask about specific countries or regions we have data for."
+        
+        # Get top-rated destinations from filtered set, prioritizing non-accommodation destinations
+        # First try to get non-accommodation destinations
+        accommodation_keywords = [
+            'hotel', 'resort', 'inn', 'club', 'villa', 'spa', 'apartment', 'guest house', 
+            'hostel', 'lodge', 'camp', 'accommodation', 'stay', 'room', 'suite', 'bed',
+            'motel', 'b&b', 'bed and breakfast', 'guesthouse', 'auberge', 'minshuku',
+            'novotel', 'hyatt', 'hilton', 'marriott', 'sheraton', 'radisson', 'holiday inn',
+            'ramada', 'best western', 'comfort inn', 'quality inn', 'days inn', 'super 8',
+            'motel 6', 'red roof', 'la quinta', 'wyndham', 'courtyard', 'hampton', 'embassy',
+            'doubletree', 'westin', 'ritz', 'four seasons', 'mandarin', 'peninsula', 'shangri-la'
+        ]
+        
+        non_accommodation_destinations = filtered_destinations[
+            ~filtered_destinations['destination'].str.contains('|'.join(accommodation_keywords), case=False, na=False)
+        ]
+        
+        if len(non_accommodation_destinations) >= 8:
+            # Use non-accommodation destinations if we have enough
+            top_destinations = non_accommodation_destinations.nlargest(10, 'rating')
+        elif len(non_accommodation_destinations) > 0:
+            # Use available non-accommodation destinations plus some accommodation
+            non_accommodation_destinations = non_accommodation_destinations.nlargest(8, 'rating')
+            accommodation_destinations = filtered_destinations[
+                filtered_destinations['destination'].str.contains('|'.join(accommodation_keywords), case=False, na=False)
+            ].nlargest(2, 'rating')
+            top_destinations = pd.concat([non_accommodation_destinations, accommodation_destinations])
+        else:
+            # If no non-accommodation destinations, provide a helpful message
+            top_destinations = filtered_destinations.nlargest(10, 'rating')
+        
+        # Create filter summary for response
+        filter_summary = self._get_filter_summary(conversation_filters)
+        response = f"🌍 **Travel Recommendations**\n\n"
+        
+        # Add note if we're showing accommodation options
+        if len(non_accommodation_destinations) == 0:
+            response += f"⚠️ **Note**: Our dataset primarily contains accommodation options rather than tourist attractions.\n\n"
+        if filter_summary:
+            response += f"Based on your preferences: {filter_summary}\n\n"
+        response += f"Here are the best matching destinations from our dataset:\n\n"
         
         for idx, row in top_destinations.iterrows():
             response += f"**{row['destination']}, {row['country']}** ({row['category']})\n"
-            response += f"• Rating: {row['rating']}/5 | Budget: {row['budget']} ({row['daily_cost']})\n"
-            response += f"• {row['attractions'][:100]}...\n\n"
+            
+            # Clean up all fields
+            rating = self._clean_text(row['rating'])
+            budget = self._clean_text(row['budget'])
+            daily_cost = self._clean_text(row['daily_cost'])
+            attractions = self._clean_text(row['attractions'])
+            
+            response += f"• Rating: {rating}/5 | Budget: {budget} ({daily_cost})\n"
+            
+            if len(attractions) > 100:
+                attractions = attractions[:100] + "..."
+            response += f"• {attractions}\n\n"
         
         response += "**What type of travel experience are you looking for?**\n"
         response += "• Cultural destinations\n"
@@ -476,10 +943,213 @@ class TravelRAGSystem:
         
         return response
     
-    def _format_category_specific_recommendations(self, query_lower) -> str:
-        """Format recommendations based on specific category preference."""
+    def _filter_destinations_by_region(self, region: str):
+        """Filter destinations by region."""
+        # Handle direct country names
+        if region in self.travel_destinations['country'].values:
+            return self.travel_destinations[self.travel_destinations['country'] == region]
+        
+        if region == 'asia':
+            asian_countries = [
+                'China', 'Japan', 'South Korea', 'North Korea', 'India', 'Pakistan', 'Bangladesh', 
+                'Sri Lanka', 'Nepal', 'Bhutan', 'Myanmar', 'Thailand', 'Laos', 'Cambodia', 
+                'Vietnam', 'Malaysia', 'Singapore', 'Indonesia', 'Philippines', 'Brunei', 
+                'Mongolia', 'Kazakhstan', 'Kyrgyzstan', 'Tajikistan', 'Turkmenistan', 'Uzbekistan',
+                'Afghanistan', 'Iran', 'Iraq', 'Syria', 'Lebanon', 'Jordan', 'Israel', 
+                'Palestine', 'Saudi Arabia', 'Yemen', 'Oman', 'United Arab Emirates', 'Qatar', 
+                'Bahrain', 'Kuwait', 'Turkey', 'Russia', 'Georgia', 'Armenia', 'Azerbaijan'
+            ]
+            return self.travel_destinations[
+                self.travel_destinations['country'].isin(asian_countries)
+            ]
+        elif region == 'europe':
+            european_countries = [
+                'France', 'Germany', 'Italy', 'Spain', 'Portugal', 'Netherlands', 'Belgium', 
+                'Switzerland', 'Austria', 'Poland', 'Czech Republic', 'Hungary', 'Romania', 
+                'Bulgaria', 'Greece', 'Croatia', 'Serbia', 'Slovakia', 'Slovenia', 'Estonia', 
+                'Latvia', 'Lithuania', 'Finland', 'Sweden', 'Norway', 'Denmark', 'Iceland', 
+                'Ireland', 'United Kingdom', 'Ukraine', 'Belarus', 'Moldova', 'Albania', 
+                'Bosnia', 'Macedonia', 'Montenegro', 'Kosovo', 'Luxembourg', 'Malta', 'Cyprus'
+            ]
+            return self.travel_destinations[
+                self.travel_destinations['country'].isin(european_countries)
+            ]
+        elif region == 'america':
+            american_countries = [
+                'United States', 'Canada', 'Mexico', 'Brazil', 'Argentina', 'Chile', 'Peru', 
+                'Colombia', 'Venezuela', 'Ecuador', 'Bolivia', 'Paraguay', 'Uruguay', 'Guyana', 
+                'Suriname', 'French Guiana', 'Cuba', 'Jamaica', 'Haiti', 'Dominican Republic', 
+                'Puerto Rico', 'Trinidad and Tobago', 'Barbados', 'Bahamas', 'Belize', 'Costa Rica', 
+                'Panama', 'Guatemala', 'Honduras', 'El Salvador', 'Nicaragua'
+            ]
+            return self.travel_destinations[
+                self.travel_destinations['country'].isin(american_countries)
+            ]
+        elif region == 'africa':
+            african_countries = [
+                'South Africa', 'Egypt', 'Nigeria', 'Kenya', 'Morocco', 'Algeria', 'Tunisia', 
+                'Libya', 'Sudan', 'Ethiopia', 'Ghana', 'Tanzania', 'Uganda', 'Cameroon', 
+                'Ivory Coast', 'Madagascar', 'Angola', 'Mozambique', 'Zambia', 'Zimbabwe', 
+                'Botswana', 'Namibia', 'Senegal', 'Mali', 'Burkina Faso', 'Niger', 'Chad', 
+                'Central African Republic', 'Democratic Republic of Congo', 'Republic of Congo', 
+                'Gabon', 'Equatorial Guinea', 'Sao Tome and Principe', 'Rwanda', 'Burundi', 
+                'Somalia', 'Djibouti', 'Eritrea', 'Mauritania', 'Gambia', 'Guinea-Bissau', 
+                'Sierra Leone', 'Liberia', 'Togo', 'Benin', 'Malawi', 'Lesotho', 'Swaziland', 
+                'Mauritius', 'Seychelles', 'Comoros', 'Cape Verde', 'Sao Tome'
+            ]
+            return self.travel_destinations[
+                self.travel_destinations['country'].isin(african_countries)
+            ]
+        elif region == 'oceania':
+            oceania_countries = [
+                'Australia', 'New Zealand', 'Fiji', 'Papua New Guinea', 'Solomon Islands', 
+                'Vanuatu', 'Samoa', 'Tonga', 'Micronesia', 'Palau', 'Marshall Islands', 
+                'Kiribati', 'Tuvalu', 'Nauru', 'Cook Islands', 'French Polynesia', 'New Caledonia'
+            ]
+            return self.travel_destinations[
+                self.travel_destinations['country'].isin(oceania_countries)
+            ]
+        else:
+            return self.travel_destinations
+    
+    def _apply_comprehensive_filters(self, conversation_filters):
+        """Apply all conversation filters to destinations."""
+        if not conversation_filters:
+            return self.travel_destinations
+        
+        filtered_destinations = self.travel_destinations.copy()
+        
+        # Apply region filter
+        if conversation_filters.get('region'):
+            filtered_destinations = self._filter_destinations_by_region(conversation_filters['region'])
+        
+        # Apply category filter
+        if conversation_filters.get('category'):
+            if conversation_filters['category'] == 'Beach':
+                # Special handling for beach destinations - prioritize actual beaches over hotels
+                beach_keywords = ['beach', 'coastal', 'seaside', 'ocean', 'sea', 'surfing', 'diving', 'snorkeling']
+                
+                # First, try to find destinations that are clearly beaches (not hotels)
+                beach_mask = (
+                    # Destinations with "beach" in name but not "hotel", "resort", "inn", "club"
+                    (
+                        filtered_destinations['destination'].str.contains('beach', case=False, na=False) &
+                        ~filtered_destinations['destination'].str.contains('hotel|resort|inn|club|villa|spa', case=False, na=False)
+                    ) |
+                    # Destinations with beach-related keywords in attractions
+                    filtered_destinations['attractions'].str.contains('|'.join(beach_keywords), case=False, na=False) |
+                    # Coastal/seaside destinations
+                    filtered_destinations['destination'].str.contains('coastal|seaside|surf', case=False, na=False)
+                )
+                filtered_destinations = filtered_destinations[beach_mask]
+            elif conversation_filters['category'] == 'Natural' and any(keyword in ' '.join(conversation_filters.get('interests', [])).lower() for keyword in ['mountain', 'mountains', 'hill', 'hills', 'peak', 'peaks']):
+                # Special handling for mountain destinations - prioritize actual mountains over beaches
+                mountain_keywords = ['mountain', 'hill', 'peak', 'summit', 'range', 'ridge', 'knuckles', 'adam', 'pidurutalagala', 'kirigalpotta', 'totapolakanda', 'hakgala', 'horton', 'world\'s end', 'ella rock', 'little adam\'s peak']
+                
+                # First, try to find destinations that are clearly mountains (not beaches or hotels)
+                mountain_mask = (
+                    # Destinations with mountain-related keywords in name
+                    filtered_destinations['destination'].str.contains('|'.join(mountain_keywords), case=False, na=False) |
+                    # Destinations with mountain-related keywords in attractions
+                    filtered_destinations['attractions'].str.contains('|'.join(mountain_keywords), case=False, na=False) |
+                    # Destinations with mountain-related keywords in description
+                    filtered_destinations['description'].str.contains('|'.join(mountain_keywords), case=False, na=False)
+                )
+                filtered_destinations = filtered_destinations[mountain_mask]
+            else:
+                filtered_destinations = filtered_destinations[
+                    filtered_destinations['category'] == conversation_filters['category']
+                ]
+        
+        # Apply budget filter
+        if conversation_filters.get('budget'):
+            filtered_destinations = filtered_destinations[
+                filtered_destinations['budget'] == conversation_filters['budget']
+            ]
+        
+        # Apply season filter (best_time column)
+        if conversation_filters.get('season'):
+            season = conversation_filters['season']
+            filtered_destinations = filtered_destinations[
+                filtered_destinations['best_time'].str.contains(season, case=False, na=False)
+            ]
+        
+        # Apply interests filter (search in attractions and description)
+        if conversation_filters.get('interests'):
+            interests = conversation_filters['interests']
+            interest_mask = pd.Series([False] * len(filtered_destinations), index=filtered_destinations.index)
+            
+            for interest in interests:
+                if interest == 'Food':
+                    interest_mask |= filtered_destinations['attractions'].str.contains(
+                        'food|cuisine|restaurant|dining|culinary', case=False, na=False
+                    )
+                elif interest == 'Beach':
+                    interest_mask |= filtered_destinations['attractions'].str.contains(
+                        'beach|coastal|ocean|sea|shore', case=False, na=False
+                    )
+                elif interest == 'Mountains':
+                    interest_mask |= filtered_destinations['attractions'].str.contains(
+                        'mountain|hiking|trekking|peak|summit', case=False, na=False
+                    )
+                elif interest == 'Shopping':
+                    interest_mask |= filtered_destinations['attractions'].str.contains(
+                        'shopping|market|mall|bazaar', case=False, na=False
+                    )
+                elif interest == 'Nightlife':
+                    interest_mask |= filtered_destinations['attractions'].str.contains(
+                        'nightlife|bars|clubs|entertainment', case=False, na=False
+                    )
+                elif interest == 'Photography':
+                    interest_mask |= filtered_destinations['attractions'].str.contains(
+                        'scenic|viewpoint|landscape|photography', case=False, na=False
+                    )
+            
+            filtered_destinations = filtered_destinations[interest_mask]
+        
+        return filtered_destinations
+    
+    def _get_filter_summary(self, conversation_filters):
+        """Create a human-readable summary of applied filters."""
+        if not conversation_filters:
+            return ""
+        
+        filters = []
+        
+        if conversation_filters.get('region'):
+            filters.append(f"Region: {conversation_filters['region'].title()}")
+        
+        if conversation_filters.get('category'):
+            filters.append(f"Type: {conversation_filters['category']}")
+        
+        if conversation_filters.get('budget'):
+            filters.append(f"Budget: {conversation_filters['budget']}")
+        
+        if conversation_filters.get('season'):
+            filters.append(f"Season: {conversation_filters['season']}")
+        
+        if conversation_filters.get('travel_style'):
+            filters.append(f"Style: {conversation_filters['travel_style']}")
+        
+        if conversation_filters.get('interests'):
+            interests_str = ', '.join(conversation_filters['interests'])
+            filters.append(f"Interests: {interests_str}")
+        
+        if conversation_filters.get('group_type'):
+            filters.append(f"Group: {conversation_filters['group_type']}")
+        
+        if conversation_filters.get('duration'):
+            filters.append(f"Duration: {conversation_filters['duration']}")
+        
+        return " | ".join(filters) if filters else ""
+    
+    def _format_category_specific_recommendations(self, query_lower, conversation_filters=None) -> str:
+        """Format recommendations based on specific category preference with comprehensive filtering."""
         # Determine category from query
-        if 'natural' in query_lower:
+        if any(keyword in query_lower for keyword in ['beach', 'beaches', 'coastal', 'seaside', 'ocean', 'sea', 'surfing', 'diving', 'snorkeling']):
+            category = 'Beach'
+            emoji = "🏖️"
+        elif 'natural' in query_lower:
             category = 'Natural'
             emoji = "🌿"
         elif 'cultural' in query_lower:
@@ -495,22 +1165,48 @@ class TravelRAGSystem:
             category = 'Natural'  # Default
             emoji = "🌿"
         
-        # Get destinations in this category
-        category_destinations = self.travel_destinations[
-            self.travel_destinations['category'] == category
-        ].nlargest(8, 'rating')
+        # Update conversation filters with the category
+        if conversation_filters is None:
+            conversation_filters = {}
+        conversation_filters['category'] = category
         
+        # Apply comprehensive filters
+        filtered_destinations = self._apply_comprehensive_filters(conversation_filters)
+        
+        # Get top destinations
+        top_destinations = filtered_destinations.nlargest(8, 'rating')
+        
+        # Create filter summary for response
+        filter_summary = self._get_filter_summary(conversation_filters)
         response = f"{emoji} **{category} Travel Destinations**\n\n"
+        
+        if filter_summary:
+            response += f"Based on your preferences: {filter_summary}\n\n"
+        
         response += f"Perfect! Here are the best {category.lower()} destinations from our dataset:\n\n"
         
-        if len(category_destinations) > 0:
-            for idx, row in category_destinations.iterrows():
+        if len(top_destinations) > 0:
+            for idx, row in top_destinations.iterrows():
                 response += f"**{row['destination']}, {row['country']}**\n"
-                response += f"• {row['attractions']}\n"
-                response += f"• Budget: {row['budget']} ({row['daily_cost']}) | Rating: {row['rating']}/5\n"
-                response += f"• Best time: {row['best_time']}\n\n"
+                
+                # Clean up attractions text
+                attractions = self._clean_text(row['attractions'])
+                
+                if len(attractions) > 100:
+                    attractions = attractions[:100] + "..."
+                
+                response += f"• {attractions}\n"
+                
+                # Clean up budget, daily cost, rating, and best time
+                budget = self._clean_text(row['budget'])
+                daily_cost = self._clean_text(row['daily_cost'])
+                rating = self._clean_text(row['rating'])
+                best_time = self._clean_text(row['best_time'])
+                
+                response += f"• Budget: {budget} ({daily_cost}) | Rating: {rating}/5\n"
+                response += f"• Best time: {best_time}\n\n"
         else:
-            response += f"No {category.lower()} destinations found in our dataset.\n\n"
+            response += f"No {category.lower()} destinations found matching your criteria in our dataset.\n\n"
         
         response += f"**Would you like more details about any of these {category.lower()} destinations?**\n"
         response += "Just ask me about a specific place and I'll give you detailed information!"

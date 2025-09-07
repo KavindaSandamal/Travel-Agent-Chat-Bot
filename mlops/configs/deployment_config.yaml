@@ -1,0 +1,53 @@
+# Deployment Configuration for Travel Advisor Chatbot (Local MLOps)
+deployment:
+  environment: "local"
+  mode: "standalone"
+  
+models:
+  rag_model:
+    name: "travel-chatbot-rag"
+    port: 8001
+    enabled: true
+    health_check:
+      path: "/health"
+      interval: 30
+      timeout: 10
+      
+  embedding_model:
+    name: "travel-chatbot-embedding"
+    port: 8002
+    enabled: true
+    health_check:
+      path: "/health"
+      interval: 30
+      timeout: 10
+      
+  llm_model:
+    name: "travel-chatbot-llm"
+    port: 8003
+    enabled: true
+    health_check:
+      path: "/health"
+      interval: 30
+      timeout: 10
+      
+  few_shot_model:
+    name: "travel-chatbot-fewshot"
+    port: 8004
+    enabled: true
+    health_check:
+      path: "/health"
+      interval: 30
+      timeout: 10
+
+monitoring:
+  enabled: true
+  interval: 30
+  metrics_endpoint: "/metrics"
+  health_endpoint: "/health"
+  
+environment_variables:
+  MODEL_PATH: "./models/"
+  LOG_LEVEL: "INFO"
+  API_VERSION: "v1"
+  ENVIRONMENT: "local"
