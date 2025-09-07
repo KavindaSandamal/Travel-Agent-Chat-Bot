@@ -410,6 +410,29 @@ class TravelRAGSystem:
                     filtered_destinations = self._apply_comprehensive_filters(conversation_filters)
                     if len(filtered_destinations) > 0:
                         return self._format_category_specific_recommendations(query_lower, conversation_filters)
+                elif any(keyword in query_lower for keyword in ['cultural', 'culture', 'historical', 'history', 'heritage', 'temple', 'temples', 'monastery', 'monasteries', 'archaeological', 'ancient', 'ruins', 'fort', 'fortress', 'palace', 'museum', 'museums', 'art', 'arts', 'traditional', 'religion', 'religious', 'buddhist', 'hindu', 'christian', 'islamic']):
+                    # Apply cultural filtering to Sri Lanka destinations
+                    conversation_filters['region'] = 'Sri Lanka'
+                    conversation_filters['category'] = 'Cultural'
+                    filtered_destinations = self._apply_comprehensive_filters(conversation_filters)
+                    if len(filtered_destinations) > 0:
+                        return self._format_category_specific_recommendations(query_lower, conversation_filters)
+                elif any(keyword in query_lower for keyword in ['natural', 'nature', 'wildlife', 'park', 'forest', 'jungle', 'botanical', 'garden', 'sanctuary', 'reserve', 'conservation']):
+                    # Apply natural filtering to Sri Lanka destinations
+                    conversation_filters['region'] = 'Sri Lanka'
+                    conversation_filters['category'] = 'Natural'
+                    filtered_destinations = self._apply_comprehensive_filters(conversation_filters)
+                    if len(filtered_destinations) > 0:
+                        return self._format_category_specific_recommendations(query_lower, conversation_filters)
+                elif any(keyword in query_lower for keyword in ['adventure', 'hiking', 'trekking', 'climbing', 'rafting', 'kayaking', 'diving', 'snorkeling', 'surfing', 'biking', 'cycling', 'extreme', 'outdoor', 'sports']):
+                    # Apply adventure filtering to Sri Lanka destinations
+                    # Since Sri Lanka dataset doesn't have Adventure category, use keyword-based filtering
+                    conversation_filters['region'] = 'Sri Lanka'
+                    # Don't set category to Adventure since it doesn't exist in Sri Lanka
+                    conversation_filters['interests'] = ['Adventure']  # Set interests to Adventure
+                    filtered_destinations = self._apply_comprehensive_filters(conversation_filters)
+                    if len(filtered_destinations) > 0:
+                        return self._format_category_specific_recommendations(query_lower, conversation_filters)
                 # Otherwise return general Sri Lanka response
                 return self._format_sri_lanka_response(sri_lanka_destinations)
         
@@ -700,39 +723,11 @@ class TravelRAGSystem:
         # Remove HTML tags
         text = re.sub(r'<[^>]+>', '', text)
         
-        # Fix common concatenation issues - more aggressive approach
-        # Split camelCase and ALLCAPS words
+        # Basic text cleaning - less aggressive approach
+        # Only fix obvious concatenation issues
         text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)  # camelCase
-        text = re.sub(r'([a-z])([A-Z][a-z])', r'\1 \2', text)  # word + Capitalized
-        text = re.sub(r'([a-z])([A-Z][A-Z])', r'\1 \2', text)  # word + ALLCAPS
-        
-        # Split numbers from letters
-        text = re.sub(r'([a-z])(\d)', r'\1 \2', text)  # letter + number
         text = re.sub(r'(\d)([A-Z])', r'\1 \2', text)  # number + letter
-        text = re.sub(r'(\d)([a-z])', r'\1 \2', text)  # number + lowercase
-        
-        # Fix specific common patterns
-        text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)  # camelCase again
-        text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)  # camelCase again
-        
-        # Handle common concatenated words (lowercase)
-        common_words = [
-            'beautiful', 'natural', 'waterfall', 'bath', 'water', 'nice', 'clam', 'place', 'cold',
-            'nature', 'look', 'attention', 'please', 'think', 'protect', 'great', 'farm', 'coconut',
-            'grove', 'spice', 'lake', 'bird', 'flower', 'tree', 'specimen', 'bar', 'entrance',
-            'allow', 'least', 'two', 'hour', 'plant', 'ideal', 'visit', 'area', 'shop', 'park',
-            'photographer', 'scene', 'take', 'capture', 'network', 'walking', 'trail', 'deep',
-            'lush', 'observe', 'resident', 'migratory', 'every', 'single', 'time', 'travel',
-            'love', 'sri', 'lanka', 'bit', 'close', 'gala', 'sharing', 'southern', 'coastline',
-            'bundle', 'national', 'fewer', 'animal', 'safari', 'jeep', 'definitely', 'distance',
-            'display', 'nearest', 'mile', 'kilometer', 'midigama', 'beach', 'left', 'surf', 'break'
-        ]
-        
-        # Split concatenated words
-        for word in common_words:
-            # Look for word followed by another word (no space)
-            pattern = f'({word})([a-z]{{2,}})'
-            text = re.sub(pattern, r'\1 \2', text, flags=re.IGNORECASE)
+        text = re.sub(r'([a-z])(\d)', r'\1 \2', text)  # letter + number
         
         # Clean up spaces and special characters
         text = re.sub(r'\s+', ' ', text)  # Multiple spaces to single
@@ -1056,6 +1051,20 @@ class TravelRAGSystem:
                     filtered_destinations['description'].str.contains('|'.join(mountain_keywords), case=False, na=False)
                 )
                 filtered_destinations = filtered_destinations[mountain_mask]
+            elif conversation_filters['category'] == 'Adventure' and any(keyword in ' '.join(conversation_filters.get('interests', [])).lower() for keyword in ['adventure', 'hiking', 'trekking', 'climbing', 'rafting', 'kayaking', 'diving', 'snorkeling', 'surfing', 'biking', 'cycling', 'extreme', 'outdoor', 'sports']):
+                # Special handling for adventure destinations - prioritize actual adventure activities
+                adventure_keywords = ['hiking', 'trekking', 'climbing', 'rafting', 'kayaking', 'diving', 'snorkeling', 'surfing', 'biking', 'cycling', 'extreme', 'outdoor', 'sports', 'adventure', 'trail', 'peak', 'summit', 'waterfall', 'cave', 'jungle', 'wildlife', 'safari', 'camping', 'backpacking']
+                
+                # First, try to find destinations that are clearly adventure-related
+                adventure_mask = (
+                    # Destinations with adventure-related keywords in name
+                    filtered_destinations['destination'].str.contains('|'.join(adventure_keywords), case=False, na=False) |
+                    # Destinations with adventure-related keywords in attractions
+                    filtered_destinations['attractions'].str.contains('|'.join(adventure_keywords), case=False, na=False) |
+                    # Destinations with adventure-related keywords in description
+                    filtered_destinations['description'].str.contains('|'.join(adventure_keywords), case=False, na=False)
+                )
+                filtered_destinations = filtered_destinations[adventure_mask]
             else:
                 filtered_destinations = filtered_destinations[
                     filtered_destinations['category'] == conversation_filters['category']
@@ -1099,6 +1108,14 @@ class TravelRAGSystem:
                 elif interest == 'Nightlife':
                     interest_mask |= filtered_destinations['attractions'].str.contains(
                         'nightlife|bars|clubs|entertainment', case=False, na=False
+                    )
+                elif interest == 'Adventure':
+                    # Adventure interest - search in destination, attractions, and description
+                    adventure_keywords = 'hiking|trekking|climbing|rafting|kayaking|diving|snorkeling|surfing|biking|cycling|extreme|outdoor|sports|adventure|trail|peak|summit|waterfall|cave|jungle|wildlife|safari|camping|backpacking'
+                    interest_mask |= (
+                        filtered_destinations['destination'].str.contains(adventure_keywords, case=False, na=False) |
+                        filtered_destinations['attractions'].str.contains(adventure_keywords, case=False, na=False) |
+                        filtered_destinations['description'].str.contains(adventure_keywords, case=False, na=False)
                     )
                 elif interest == 'Photography':
                     interest_mask |= filtered_destinations['attractions'].str.contains(
