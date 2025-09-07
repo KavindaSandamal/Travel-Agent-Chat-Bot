@@ -1,0 +1,16 @@
+location,country,review_text,rating,category,budget_level
+Paris,France,"Amazing city with beautiful architecture, great food, and rich culture. The Eiffel Tower and Louvre are must-sees.",5,Cultural,Mid-range
+Tokyo,Japan,"Incredible blend of traditional and modern. Great food, efficient transportation, and friendly people.",5,Cultural,Mid-range
+London,UK,"Historic city with world-class museums, great theater, and diverse neighborhoods. Weather can be unpredictable.",4,Cultural,High
+New York,USA,"The city that never sleeps! Amazing food scene, Broadway shows, and endless activities.",4,Entertainment,High
+Sydney,Australia,"Beautiful harbor city with great beaches, outdoor lifestyle, and iconic landmarks like the Opera House.",5,Nature,Mid-range
+Rome,Italy,"Ancient history comes alive here. Amazing food, beautiful architecture, and rich cultural heritage.",5,Cultural,Mid-range
+Barcelona,Spain,"Vibrant city with amazing architecture, great food scene, and beautiful beaches. Perfect for art lovers.",4,Cultural,Mid-range
+Amsterdam,Netherlands,"Charming canals, beautiful architecture, and great museums. Perfect for a romantic getaway.",4,Romantic,Mid-range
+Bangkok,Thailand,"Incredible street food, beautiful temples, and friendly people. Great value for money.",5,Budget,Budget
+Dubai,UAE,"Modern city with amazing architecture, luxury shopping, and great desert experiences.",4,Luxury,Luxury
+Singapore,Singapore,"Clean, modern city with amazing food, great shopping, and efficient public transport.",5,Modern,High
+Istanbul,Turkey,"Where East meets West. Amazing history, beautiful mosques, and incredible food.",4,Cultural,Mid-range
+Prague,Czech Republic,"Fairytale city with beautiful architecture, great beer, and charming old town.",5,Cultural,Budget
+Vienna,Austria,"Elegant city with amazing music, beautiful palaces, and great coffee culture.",4,Cultural,Mid-range
+Berlin,Germany,"Vibrant city with amazing nightlife, great museums, and rich history.",4,Nightlife,Mid-range
