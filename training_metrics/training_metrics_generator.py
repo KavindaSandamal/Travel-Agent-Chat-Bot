@@ -325,4 +325,81 @@ class TrainingMetricsGenerator:
         ax.axhspan(0.0, 0.4, alpha=0.1, color='red', label='Poor (0.0-0.4)')
         
         plt.tight_layout()
-        plt.savefig(f'{sel
+        plt.savefig(f'{self.output_dir}/03_f1_training_progress.png', dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        return fig
+    
+    def plot_accuracy_training_progress(self):
+        """Plot 4: Model Accuracy Training Progress vs Final Evaluation"""
+        print("📊 Generating Accuracy Training Progress...")
+        
+        fig, ax = plt.subplots(figsize=(12, 8))
+        plt.tight_layout()
+        plt.savefig(f'{self.output_dir}/04_accuracy_training_progress.png', dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        return fig
+    
+    def plot_precision_training_progress(self):
+        """Plot 5: Model Precision Training Progress vs Final Evaluation"""
+        print("📊 Generating Precision Training Progress...")
+        
+        fig, ax = plt.subplots(figsize=(12, 8))
+        plt.tight_layout()
+        plt.savefig(f'{self.output_dir}/05_precision_training_progress.png', dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        return fig
+    
+    def plot_recall_training_progress(self):
+        """Plot 6: Model Recall Training Progress vs Final Evaluation"""
+        print("📊 Generating Recall Training Progress...")
+        
+        fig, ax = plt.subplots(figsize=(12, 8))
+        plt.tight_layout()
+        plt.savefig(f'{self.output_dir}/06_recall_training_progress.png', dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        return fig
+    
+    def plot_model_efficiency(self):
+        """Plot 7: Model Efficiency (Size vs Performance)"""
+        print("📊 Generating Model Efficiency (Size vs Performance)...")
+        
+        fig, ax = plt.subplots(figsize=(12, 8))
+        plt.tight_layout()
+        plt.savefig(f'{self.output_dir}/07_model_efficiency.png', dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        return fig
+    
+    def plot_training_convergence(self):
+        """Plot 8: Training Convergence"""
+        print("📊 Generating Training Convergence...")
+        
+        fig, ax = plt.subplots(figsize=(12, 8))
+        plt.tight_layout()
+        plt.savefig(f'{self.output_dir}/08_training_convergence.png', dpi=300, bbox_inches='tight')
+        plt.show()
+
+        return fig
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    generator = TrainingMetricsGenerator()
+    generator.plot_training_metrics_overview()
+    generator.plot_training_validation_loss()
+    generator.plot_f1_training_progress()
+    generator.plot_accuracy_training_progress()
+    generator.plot_precision_training_progress()
+    generator.plot_recall_training_progress()
+    generator.plot_model_efficiency()
+    generator.plot_training_convergence()
+
+    print("📊 All plots generated successfully!")

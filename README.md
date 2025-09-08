@@ -60,6 +60,17 @@ streamlit run travel_chatbot_app.py
 python main.py
 ```
 
+# MLflow UI only
+```bash
+mlflow ui --backend-store-uri file:///D:/Travel%20Agent%20Chat%20Bot/mlruns --default-artifact-root file:///D:/Travel%20Agent%20Chat%20Bot/mlruns --host 127.0.0.1 --port 5000
+
+# Working monitoring dashboard only
+streamlit run working_monitoring_dashboard.py --server.port 8502
+
+# Chatbot only
+streamlit run travel_chatbot_app.py --server.port 8501
+```
+
 ## 📊 Datasets
 
 The system uses comprehensive real-world travel datasets:
