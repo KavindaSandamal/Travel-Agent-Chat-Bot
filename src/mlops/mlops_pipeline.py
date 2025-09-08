@@ -70,12 +70,20 @@ class ModelTrainer:
     def setup_mlflow(self):
         """Setup MLflow tracking."""
         try:
+            # Set tracking URI first
+            mlflow.set_tracking_uri("file:./mlruns")
             mlflow.set_experiment(self.experiment_name)
             logger.info(f"✅ MLflow experiment '{self.experiment_name}' set up successfully")
         except Exception as e:
             logger.warning(f"⚠️ MLflow setup failed: {e}")
-            mlflow.set_tracking_uri("file:./mlruns")
-            mlflow.set_experiment(self.experiment_name)
+            try:
+                # Fallback: try with absolute path
+                mlflow.set_tracking_uri("file:///D:/Travel%20Agent%20Chat%20Bot/mlruns")
+                mlflow.set_experiment(self.experiment_name)
+                logger.info(f"✅ MLflow experiment '{self.experiment_name}' set up with fallback URI")
+            except Exception as e2:
+                logger.error(f"❌ MLflow setup completely failed: {e2}")
+                # Continue without MLflow tracking
     
     def train_model(self, model, train_data, val_data, model_name: str = "travel_chatbot") -> ModelMetrics:
         """
@@ -115,11 +123,14 @@ class ModelTrainer:
             metrics.timestamp = datetime.now().isoformat()
             
             # Log metrics
-            mlflow.log_metric("accuracy", metrics.accuracy)
-            mlflow.log_metric("precision", metrics.precision)
-            mlflow.log_metric("recall", metrics.recall)
-            mlflow.log_metric("f1_score", metrics.f1_score)
-            mlflow.log_metric("training_time", training_time)
+            try:
+                mlflow.log_metric("accuracy", metrics.accuracy)
+                mlflow.log_metric("precision", metrics.precision)
+                mlflow.log_metric("recall", metrics.recall)
+                mlflow.log_metric("f1_score", metrics.f1_score)
+                mlflow.log_metric("training_time", training_time)
+            except Exception as e:
+                logger.warning(f"Could not log metrics to MLflow: {e}")
             
             # Log model
             if hasattr(model, 'save'):
@@ -132,17 +143,25 @@ class ModelTrainer:
                 os.makedirs("models", exist_ok=True)
                 with open(model_path, 'wb') as f:
                     pickle.dump(model, f)
-                mlflow.log_artifact(model_path)
+                # File is now closed, safe to log artifact
+                try:
+                    mlflow.log_artifact(model_path)
+                except Exception as e:
+                    logger.warning(f"Could not log artifact {model_path}: {e}")
             
             # Log model size
-            model_size = os.path.getsize(model_path) / (1024 * 1024)  # MB
-            mlflow.log_metric("model_size_mb", model_size)
-            metrics.model_size = model_size
+            try:
+                model_size = os.path.getsize(model_path) / (1024 * 1024)  # MB
+                mlflow.log_metric("model_size_mb", model_size)
+                metrics.model_size = model_size
+            except Exception as e:
+                logger.warning(f"Could not log model size to MLflow: {e}")
+                metrics.model_size = 0.0
             
             logger.info(f"✅ Training completed for {model_name}")
             logger.info(f"   Accuracy: {metrics.accuracy:.3f}")
             logger.info(f"   Training time: {training_time:.2f}s")
-            logger.info(f"   Model size: {model_size:.2f}MB")
+            logger.info(f"   Model size: {metrics.model_size:.2f}MB")
             
             return metrics
     

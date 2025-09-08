@@ -1,0 +1,29 @@
+{
+  "rag_model": {
+    "accuracy": 0.75,
+    "precision": 0.7525252525252526,
+    "recall": 0.75,
+    "f1_score": 0.7493734335839599,
+    "training_time": 2.015181064605713,
+    "model_size": 90.96700668334961,
+    "timestamp": "2025-09-08T22:17:37.272632"
+  },
+  "embedding_model": {
+    "accuracy": 0.725,
+    "precision": 0.7218406593406594,
+    "recall": 0.725,
+    "f1_score": 0.7229546991210277,
+    "training_time": 2.005282163619995,
+    "model_size": 0.0001277923583984375,
+    "timestamp": "2025-09-08T22:17:40.176667"
+  },
+  "few_shot_model": {
+    "accuracy": 0.75,
+    "precision": 0.75,
+    "recall": 0.75,
+    "f1_score": 0.75,
+    "training_time": 2.005689859390259,
+    "model_size": 87.1613998413086,
+    "timestamp": "2025-09-08T22:18:05.751948"
+  }
+}

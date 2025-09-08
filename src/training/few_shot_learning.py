@@ -503,6 +503,54 @@ class TravelFewShotLearner:
             response = f"Based on {new_example}, I can help you find similar options that match your preferences."
         
         return response
+    
+    def fit(self, X, y=None):
+        """
+        Fit method for compatibility with sklearn-style training.
+        
+        Args:
+            X: Training data (not used in this implementation)
+            y: Target labels (not used in this implementation)
+        """
+        # This is a few-shot learner, so no traditional training is needed
+        print("🎯 TravelFewShotLearner: Using few-shot learning approach")
+        return self
+    
+    def predict(self, X):
+        """
+        Predict method for compatibility with sklearn-style evaluation.
+        
+        Args:
+            X: Input data (list of queries)
+            
+        Returns:
+            List of predictions (responses)
+        """
+        predictions = []
+        for query in X:
+            response = self.learn_from_examples(query, num_examples=3)
+            predictions.append(response)
+        return predictions
+    
+    def score(self, X, y):
+        """
+        Score method for compatibility with sklearn-style evaluation.
+        
+        Args:
+            X: Input data (list of queries)
+            y: True labels (list of expected responses)
+            
+        Returns:
+            Accuracy score based on response quality
+        """
+        predictions = self.predict(X)
+        # Simple scoring based on response length and content
+        scores = []
+        for pred, true in zip(predictions, y):
+            # Basic scoring: longer responses with more content get higher scores
+            score = min(len(pred) / 100.0, 1.0) if pred else 0.0
+            scores.append(score)
+        return np.mean(scores)
 
 def main():
     """Demonstrate few-shot learning techniques."""

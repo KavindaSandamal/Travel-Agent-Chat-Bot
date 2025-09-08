@@ -427,6 +427,50 @@ class TravelTransformerPipeline:
         else:
             # General response
             return self.gpt_generator.generate_response(query, max_length=150)
+    
+    def fit(self, X, y=None):
+        """
+        Fit method for compatibility with sklearn-style training.
+        
+        Args:
+            X: Training data (not used in this implementation)
+            y: Target labels (not used in this implementation)
+        """
+        # This is a pre-trained pipeline, so no actual training is needed
+        # Just initialize components if needed
+        print("🤖 TravelTransformerPipeline: Using pre-trained components")
+        return self
+    
+    def predict(self, X):
+        """
+        Predict method for compatibility with sklearn-style evaluation.
+        
+        Args:
+            X: Input data (list of queries)
+            
+        Returns:
+            List of predictions
+        """
+        predictions = []
+        for query in X:
+            result = self.process_query(query)
+            # Return the intent as the prediction
+            predictions.append(result['intent'])
+        return predictions
+    
+    def score(self, X, y):
+        """
+        Score method for compatibility with sklearn-style evaluation.
+        
+        Args:
+            X: Input data (list of queries)
+            y: True labels (list of intents)
+            
+        Returns:
+            Accuracy score
+        """
+        predictions = self.predict(X)
+        return accuracy_score(y, predictions)
 
 def main():
     """Demonstrate transformer models and LLMs."""
