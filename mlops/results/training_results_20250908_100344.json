@@ -1,0 +1,38 @@
+{
+  "rag_model": {
+    "accuracy": 0.75,
+    "precision": 0.7525252525252526,
+    "recall": 0.75,
+    "f1_score": 0.7493734335839599,
+    "training_time": 2.012338876724243,
+    "model_size": 90.96700668334961,
+    "timestamp": "2025-09-08T10:03:00.242207"
+  },
+  "embedding_model": {
+    "accuracy": 0.725,
+    "precision": 0.7218406593406594,
+    "recall": 0.725,
+    "f1_score": 0.7229546991210277,
+    "training_time": 2.001309633255005,
+    "model_size": 0.0001277923583984375,
+    "timestamp": "2025-09-08T10:03:03.448622"
+  },
+  "llm_model": {
+    "accuracy": 0.8333333333333334,
+    "precision": 0.8400000000000001,
+    "recall": 0.8333333333333334,
+    "f1_score": 0.8356867779204108,
+    "training_time": 2.0076699256896973,
+    "model_size": 2176.229271888733,
+    "timestamp": "2025-09-08T10:03:05.649876"
+  },
+  "few_shot_model": {
+    "accuracy": 0.75,
+    "precision": 0.75,
+    "recall": 0.75,
+    "f1_score": 0.75,
+    "training_time": 2.0097134113311768,
+    "model_size": 87.1613998413086,
+    "timestamp": "2025-09-08T10:03:43.886218"
+  }
+}

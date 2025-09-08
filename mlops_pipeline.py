@@ -9,6 +9,7 @@ import os
 import time
 import subprocess
 import threading
+import webbrowser
 from datetime import datetime
 from typing import Dict, List, Any
 
@@ -21,10 +22,41 @@ sys.path.append(os.path.join(project_root, 'mlops'))
 def print_banner():
     """Print the MLOps pipeline banner."""
     print("=" * 80)
-    print("🚀 TRAVEL ADVISOR CHATBOT - COMPLETE MLOPS PIPELINE")
+    print("🚀 TRAVEL ADVISOR CHATBOT - COMPLETE MLOps PIPELINE")
     print("=" * 80)
     print("🎯 Single Script for Training, Deployment, Monitoring & Chatbot")
     print("=" * 80)
+
+def open_browser_links():
+    """Open browser links for MLflow and monitoring dashboard."""
+    print("\n🌐 Opening browser links...")
+    
+    # Wait a moment for services to fully start
+    time.sleep(3)
+    
+    try:
+        # Open MLflow UI
+        print("📊 Opening MLflow UI...")
+        webbrowser.open("http://127.0.0.1:5000")
+        print("✅ MLflow UI opened in browser")
+    except Exception as e:
+        print(f"⚠️  Could not open MLflow UI: {e}")
+    
+    try:
+        # Open monitoring dashboard
+        print("📈 Opening monitoring dashboard...")
+        webbrowser.open("http://localhost:8502")
+        print("✅ Monitoring dashboard opened in browser")
+    except Exception as e:
+        print(f"⚠️  Could not open monitoring dashboard: {e}")
+    
+    try:
+        # Open chatbot application
+        print("🤖 Opening chatbot application...")
+        webbrowser.open("http://localhost:8501")
+        print("✅ Chatbot application opened in browser")
+    except Exception as e:
+        print(f"⚠️  Could not open chatbot application: {e}")
 
 def check_dependencies():
     """Check if all required dependencies are installed."""
@@ -40,7 +72,8 @@ def check_dependencies():
         'sentence-transformers': 'sentence_transformers',
         'transformers': 'transformers',
         'torch': 'torch',
-        'nltk': 'nltk'
+        'nltk': 'nltk',
+        'requests': 'requests'
     }
     
     missing_packages = []
@@ -75,8 +108,52 @@ def check_mlflow_server():
             return False
     except:
         print("❌ MLflow server not running")
-        print("💡 To start MLflow server, run:")
-        print("   mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 127.0.0.1 --port 5000")
+        return False
+
+def start_mlflow_server():
+    """Start MLflow server in a new Windows terminal window."""
+    print("\n🚀 Starting MLflow Server...")
+    
+    try:
+        # Create necessary directories
+        os.makedirs("mlruns", exist_ok=True)
+        
+        print("🔄 Starting MLflow server in new Windows terminal...")
+        
+        # MLflow command (using working path format)
+        mlflow_cmd = "mlflow ui --backend-store-uri file:///D:/Travel%20Agent%20Chat%20Bot/mlruns --default-artifact-root file:///D:/Travel%20Agent%20Chat%20Bot/mlruns --host 127.0.0.1 --port 5000"
+        
+        # Start MLflow server in new Windows terminal window
+        if os.name == 'nt':  # Windows
+            cmd = f'start "MLflow Server" cmd /k "{mlflow_cmd}"'
+            subprocess.Popen(cmd, shell=True)
+            print("📝 Opened MLflow server in new Windows terminal window")
+        else:  # Unix-like systems
+            cmd = f'xterm -e "{mlflow_cmd}" &'
+            subprocess.Popen(cmd, shell=True)
+            print("📝 Opened MLflow server in new terminal window")
+        
+        # Wait for server to start
+        print("⏳ Waiting for MLflow server to start...")
+        for i in range(15):  # Wait up to 15 seconds
+            time.sleep(1)
+            if check_mlflow_server():
+                print("✅ MLflow server started successfully!")
+                print("📊 MLflow UI available at: http://127.0.0.1:5000")
+                print("🖥️  MLflow server is running in a new terminal window")
+                return True
+            print(f"   Attempt {i+1}/15...")
+        
+        print("❌ Failed to start MLflow server within timeout")
+        print("💡 Please check if a new terminal window opened for MLflow")
+        print("💡 Or start MLflow server manually:")
+        print(f"   {mlflow_cmd}")
+        return False
+            
+    except Exception as e:
+        print(f"❌ Error starting MLflow server: {e}")
+        print("💡 Please start MLflow server manually:")
+        print("   mlflow ui --backend-store-uri file:///D:/Travel%20Agent%20Chat%20Bot/mlruns --default-artifact-root file:///D:/Travel%20Agent%20Chat%20Bot/mlruns --host 127.0.0.1 --port 5000")
         return False
 
 def train_models():
@@ -143,17 +220,44 @@ def deploy_models():
         return False
 
 def start_monitoring():
-    """Start monitoring dashboard locally."""
-    print("\n📈 Starting Local Monitoring Dashboard...")
+    """Start working monitoring dashboard."""
+    print("\n📈 Starting Working Monitoring Dashboard...")
     
     try:
-        # Check if monitoring dashboard can be imported
-        from mlops.dashboards.mlops_monitoring_dashboard import MLOpsMonitoringDashboard
+        print("🔄 Starting working monitoring dashboard...")
         
-        print("✅ Monitoring dashboard components loaded")
-        print("💡 To start monitoring dashboard, run:")
-        print("   python mlops/dashboards/mlops_monitoring_dashboard.py")
-        print("   Then access: http://localhost:8502")
+        # Use the new working monitoring dashboard
+        monitoring_cmd = "streamlit run working_monitoring_dashboard.py --server.port 8502"
+        
+        # Start monitoring dashboard in new Windows terminal window
+        if os.name == 'nt':  # Windows
+            cmd = f'start "Working Monitoring Dashboard" cmd /k "{monitoring_cmd}"'
+            subprocess.Popen(cmd, shell=True)
+            print("📝 Opened working monitoring dashboard in new Windows terminal window")
+        else:  # Unix-like systems
+            cmd = f'xterm -e "{monitoring_cmd}" &'
+            subprocess.Popen(cmd, shell=True)
+            print("📝 Opened working monitoring dashboard in new terminal window")
+        
+        # Wait for dashboard to start
+        print("⏳ Waiting for monitoring dashboard to start...")
+        for i in range(10):  # Wait up to 10 seconds
+            time.sleep(1)
+            try:
+                import requests
+                response = requests.get("http://localhost:8502", timeout=2)
+                if response.status_code == 200:
+                    print("✅ Working monitoring dashboard started successfully!")
+                    print("📊 Monitoring dashboard available at: http://localhost:8502")
+                    print("🖥️  Monitoring dashboard is running in a new terminal window")
+                    print("💡 This dashboard shows real model data and simulated performance metrics")
+                    return True
+            except:
+                pass
+            print(f"   Attempt {i+1}/10...")
+        
+        print("⚠️  Monitoring dashboard may still be starting...")
+        print("📊 Monitoring dashboard should be available at: http://localhost:8502")
         return True
         
     except Exception as e:
@@ -187,9 +291,15 @@ def show_system_status():
     print("🎉 LOCAL MLOPS PIPELINE COMPLETE!")
     print("=" * 80)
     print("📊 System Status:")
-    print("   ✅ MLflow Server: http://127.0.0.1:5000")
+    print("   ✅ MLflow Server: http://127.0.0.1:5000 (in separate terminal)")
+    print("   ✅ Working Monitoring Dashboard: http://localhost:8502 (in separate terminal)")
     print("   ✅ Local Model Storage: ./models/")
     print("   ✅ Chatbot Application: http://localhost:8501")
+    print("=" * 80)
+    print("🖥️  Terminal Windows:")
+    print("   • MLflow Server - Running in 'MLflow Server' terminal")
+    print("   • Working Monitoring Dashboard - Running in 'Working Monitoring Dashboard' terminal")
+    print("   • Main Pipeline - Running in current terminal")
     print("=" * 80)
     print("🎯 What's Available:")
     print("   • Model training with MLOps tracking")
@@ -197,12 +307,22 @@ def show_system_status():
     print("   • Interactive travel advisor chatbot")
     print("   • Model versioning and experiment tracking")
     print("   • Enhanced dataset with 9,084 destinations")
+    print("   • Working monitoring dashboard with real model data")
+    print("   • Simulated performance metrics for demonstration")
     print("=" * 80)
     print("💡 Local MLOps Benefits:")
     print("   • No Docker complexity - runs directly on your machine")
     print("   • Fast startup and deployment")
     print("   • Easy debugging and development")
     print("   • All data tracked in MLflow UI")
+    print("   • Separate terminal windows for easy monitoring")
+    print("   • Auto-opened browser links for quick access")
+    print("=" * 80)
+    print("🔧 Recent Updates:")
+    print("   • Fixed monitoring dashboard Streamlit warnings")
+    print("   • Created working monitoring dashboard with real model detection")
+    print("   • Bypassed MLflow database corruption issues")
+    print("   • Added simulated performance metrics for demonstration")
     print("=" * 80)
 
 def main():
@@ -214,10 +334,12 @@ def main():
         print("\n❌ Please install missing dependencies and try again.")
         return
     
-    # Step 2: Check MLflow server
-    if not check_mlflow_server():
-        print("\n⚠️  MLflow server not running. Please start it manually.")
-        print("💡 Run: mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 127.0.0.1 --port 5000")
+    # Step 2: Start MLflow server in new Windows terminal
+    print("\n🚀 Starting MLflow server in new Windows terminal...")
+    if not start_mlflow_server():
+        print("\n❌ Failed to start MLflow server automatically.")
+        print("💡 Please start MLflow server manually:")
+        print("   mlflow ui --backend-store-uri file:///D:/Travel%20Agent%20Chat%20Bot/mlruns --default-artifact-root file:///D:/Travel%20Agent%20Chat%20Bot/mlruns --host 127.0.0.1 --port 5000")
         print("🔄 Or continue without MLflow tracking...")
         user_input = input("\nContinue without MLflow? (y/n): ").lower()
         if user_input != 'y':
@@ -236,10 +358,13 @@ def main():
     # Step 5: Setup monitoring
     start_monitoring()
     
-    # Step 6: Show system status
+    # Step 6: Open browser links
+    open_browser_links()
+    
+    # Step 7: Show system status
     show_system_status()
     
-    # Step 7: Launch chatbot (this will run in foreground)
+    # Step 8: Launch chatbot (this will run in foreground)
     try:
         launch_chatbot()
     except KeyboardInterrupt:

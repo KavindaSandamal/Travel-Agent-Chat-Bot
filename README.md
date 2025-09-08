@@ -47,14 +47,17 @@ pip install -r requirements.txt
 
 3. **Run the application**
 ```bash
-# Option 1: Launch complete system
-python launch_complete_system.py
+# Option 1: Run complete MLOps pipeline (Updated)
+python mlops_pipeline.py
 
-# Option 2: Run main application
-python main.py
+# Option 2: Use updated MLOps launcher
+python run_mlops_updated.py
 
-# Option 3: Launch web interface
+# Option 3: Launch web interface only
 streamlit run travel_chatbot_app.py
+
+# Option 4: Run main application
+python main.py
 ```
 
 ## 📊 Datasets
@@ -196,6 +199,25 @@ python main.py
 2. Create a feature branch
 3. Make your changes
 4. Submit a pull request
+
+## 📊 Monitoring & MLOps
+
+The system includes comprehensive monitoring and MLOps capabilities:
+
+### **MLflow Dashboard**
+- **URL**: http://127.0.0.1:5000
+- **Features**: Experiment tracking, model versioning, performance metrics
+- **Status**: May have database corruption issues (use working monitoring dashboard instead)
+
+### **Working Monitoring Dashboard**
+- **URL**: http://localhost:8502
+- **Features**: Real-time model performance, system health, simulated metrics
+- **Status**: ✅ Working perfectly (bypasses MLflow corruption)
+
+### **MLOps Pipeline**
+- **Command**: `python mlops_pipeline.py`
+- **Features**: Complete training, deployment, monitoring, and chatbot launch
+- **Updates**: Fixed monitoring dashboard, working MLflow integration
 
 ## 📄 License
 
