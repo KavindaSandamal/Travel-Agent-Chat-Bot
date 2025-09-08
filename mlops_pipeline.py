@@ -156,6 +156,18 @@ def launch_chatbot():
         print("\n👋 Chatbot stopped by user")
     except Exception as e:
         print(f"❌ Error launching chatbot: {e}")
+    
+def launch_monitoring():
+    """Launch the monitoring dashboard."""
+    print("\n📈 Launching Monitoring Dashboard...")
+    print("-" * 40)
+
+    try:
+        monitoring_cmd = ["streamlit", "run", "mlops/dashboards/mlops_monitoring_dashboard.py", "--server.port", "8502"]
+        print("🚀 Starting monitoring dashboard at: http://localhost:8502")
+        subprocess.run(monitoring_cmd)
+    except KeyboardInterrupt:
+        print("\n👋 Monitoring dashboard stopped by user")
 
 def show_system_status():
     """Show the current system status and access points."""
@@ -213,6 +225,7 @@ def main():
     
     try:
         launch_chatbot()
+        launch_monitoring()
     except KeyboardInterrupt:
         print("\n👋 Local MLOps pipeline stopped by user")
 
